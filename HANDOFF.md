@@ -50,13 +50,30 @@ Two views, no router, toggled by touch:
 ## Kiosk auto-launch
 
 `start-kiosk.ps1` launches Chrome (Kyle's preferred browser over Edge) in
-fullscreen kiosk mode against the live Pages URL. It's meant to be wired to
-a Windows Task Scheduler task with an "at log on" trigger for this user, so
-the kiosk comes up on its own any time the PC is signed into — the PC uses
-manual sign-in (not Windows auto-login), so this still requires a
-physical/remote login once, but nothing beyond that.
+fullscreen kiosk mode against the live Vercel deployment, under its own
+isolated `--user-data-dir` (`%LOCALAPPDATA%\HomeHubKioskProfile`) rather
+than Kyle's regular Chrome profile — this PC is also used for everyday/dev
+work with regular Chrome open, and Chrome only honors startup flags like
+`--kiosk` when actually launching a fresh process; handing off to an
+already-running instance (same profile) silently drops `--kiosk` and just
+opens a normal window instead. The isolated profile guarantees a real
+kiosk instance every time, and also lets tooling reliably tell the kiosk
+apart from Kyle's regular browsing when checking whether it's running.
 
-**To exit kiosk mode for maintenance: Alt+F4.**
+It's wired to two Task Scheduler entries (both at-logon-trigger, "Owner"
+user): `HomeHubKiosk` (launches once at logon) and `HomeHubKioskWatchdog`
+(runs `watchdog.ps1` every 5 minutes, relaunching the kiosk if it isn't
+running — recovers from a crash or an accidental close without needing a
+reboot).
+
+**To exit kiosk mode: Ctrl+Alt+Del → Task Manager → End Task on Chrome.**
+This is not a workaround — Chrome's `--kiosk` mode deliberately disables
+Alt+F4 and other in-browser exit shortcuts so a stray keypress can't kick
+someone out. Ctrl+Alt+Del is an OS-level secure attention sequence Chrome
+has no ability to intercept, so it's the reliable way in regardless of
+kiosk state. (Separately, Win+D or Alt+Tab let you peek at other windows —
+e.g. to check on a Claude Code session — without disturbing the kiosk at
+all; only fully closing Chrome via Task Manager stops it.)
 
 Screen timeout/sleep/hibernate and the Windows screensaver were all
 disabled directly via `powercfg` and the `ScreenSaveActive` registry value
