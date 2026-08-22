@@ -49,12 +49,12 @@ Two views, no router, toggled by touch:
 
 ## Kiosk auto-launch
 
-`start-kiosk.ps1` launches Edge in fullscreen kiosk mode against the live
-Pages URL. It's meant to be wired to a Windows Task Scheduler task with an
-"at log on" trigger for this user, so the kiosk comes up on its own any
-time the PC is signed into — the PC uses manual sign-in (not Windows
-auto-login), so this still requires a physical/remote login once, but
-nothing beyond that.
+`start-kiosk.ps1` launches Chrome (Kyle's preferred browser over Edge) in
+fullscreen kiosk mode against the live Pages URL. It's meant to be wired to
+a Windows Task Scheduler task with an "at log on" trigger for this user, so
+the kiosk comes up on its own any time the PC is signed into — the PC uses
+manual sign-in (not Windows auto-login), so this still requires a
+physical/remote login once, but nothing beyond that.
 
 **To exit kiosk mode for maintenance: Alt+F4.**
 

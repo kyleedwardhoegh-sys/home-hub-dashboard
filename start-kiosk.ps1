@@ -2,17 +2,17 @@
 # GitHub Pages deployment. Meant to be run by a Task Scheduler "at log on"
 # trigger so the kiosk comes up automatically after signing in.
 #
+# Uses Chrome (Kyle's preferred browser) rather than Edge.
 # To exit kiosk mode for maintenance: Alt+F4.
 
 $url = "https://kyleedwardhoegh-sys.github.io/home-hub-dashboard/"
-$edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-if (-not (Test-Path $edge)) {
-  $edge = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+$chrome = "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+if (-not (Test-Path $chrome)) {
+  $chrome = "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
 }
 
-Start-Process -FilePath $edge -ArgumentList @(
+Start-Process -FilePath $chrome -ArgumentList @(
   "--kiosk", $url,
-  "--edge-kiosk-type=fullscreen",
   "--no-first-run",
   "--disable-pinch"
 )
