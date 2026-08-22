@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Home Hub</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#14213d">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<section id="ambient" class="view active">
+  <div class="bg-blobs" aria-hidden="true">
+    <div class="blob blob-a"></div>
+    <div class="blob blob-b"></div>
+    <div class="blob blob-c"></div>
+  </div>
+
+  <div class="ambient-content" id="ambient-content">
+    <div class="clock" id="clock">--:--</div>
+    <div class="date" id="date">&nbsp;</div>
+    <div class="weather" id="weather" hidden>
+      <span class="weather-icon" id="weather-icon">⛅</span>
+      <span class="weather-temp" id="weather-temp">--°</span>
+      <span class="weather-desc" id="weather-desc">Loading weather…</span>
+    </div>
+  </div>
+
+  <div class="ambient-hint">Tap anywhere to open</div>
+</section>
+
+<section id="launcher" class="view" hidden>
+  <div class="launcher-header">
+    <h1>Home Hub</h1>
+  </div>
+  <div class="launcher-grid">
+    <a class="tile tile-workouts" href="https://kyleedwardhoegh-sys.github.io/home-hub-web/">
+      <span class="tile-emoji">🏋️</span>
+      <span class="tile-name">Workouts</span>
+    </a>
+    <a class="tile tile-football" href="https://kyleedwardhoegh-sys.github.io/football-practice-planner/">
+      <span class="tile-emoji">🏈</span>
+      <span class="tile-name">Practice Planner</span>
+    </a>
+    <a class="tile tile-team" href="https://kyleedwardhoegh-sys.github.io/maple-grove-crimson/">
+      <span class="tile-emoji">🏆</span>
+      <span class="tile-name">Team Site</span>
+    </a>
+    <div class="tile tile-calendar tile-soon">
+      <span class="tile-emoji">📅</span>
+      <span class="tile-name">Calendar</span>
+      <span class="tile-badge">Coming Soon</span>
+    </div>
+  </div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>
