@@ -102,8 +102,43 @@ other windows — e.g. to check on a Claude Code session — without
 disturbing the kiosk at all; only fully closing Edge via Task Manager
 stops it.)
 
-A **touch-only exit** (no keyboard at all, for when one isn't handy) was
-requested 2026-08-22 and is still open — see "Not yet built" below.
+**Touch-only exit** (no keyboard at all) was requested and built 2026-08-22:
+hold the bottom-right 80x80px corner of the screen for 3 seconds, from
+either view (ambient or launcher). A small semi-transparent dot grows
+during the hold as feedback - deliberately unlabeled, not something Nash
+or Nellie would notice or stumble into. On completion it navigates to the
+custom `homehubadmin://exit` URL scheme, registered in `HKCU` (no admin
+elevation needed, via `register-exit-handler.ps1`) to run `exit-kiosk.ps1`,
+which closes the kiosk's isolated Edge process (gracefully first via
+`CloseMainWindow()`, force-killing only what's still running after 2s).
+Confirmed fully working end-to-end 2026-08-22: hold corner -> kiosk closes,
+no popup, no keyboard. Doesn't touch the watchdog - it'll relaunch the
+kiosk on its next 5-minute check like any other close, unless separately
+paused.
+
+**Gotcha: Edge's `--edge-kiosk-type=fullscreen` runs as an InPrivate
+session** (visible in the window title as "[InPrivate]"). InPrivate
+forgets everything between launches by design - including "Always allow
+this site to open X" checkbox choices from the external-protocol
+confirmation prompt that first appears when the exit gesture navigates to
+`homehubadmin://`. So checking that box does NOT make the prompt go away
+on future launches, no matter how carefully it's done - this isn't a bug,
+it's how InPrivate is supposed to work. The actual fix is a machine-level
+Edge policy that Edge reads fresh from the registry on every launch,
+independent of the ephemeral InPrivate profile: `register-exit-policy.ps1`
+sets `AutoLaunchProtocolsFromOrigins` under
+`HKLM\SOFTWARE\Policies\Microsoft\Edge` to pre-authorize
+`home-hub-dashboard.vercel.app` for the `homehubadmin` protocol. This is a
+**one-time, admin-elevated setup step** (run via `Start` -> search
+PowerShell -> "Run as administrator", not double-click or the Explorer
+right-click "Run with PowerShell" - the latter doesn't self-elevate and
+silently no-ops without one). If this PC is ever rebuilt or the policy
+otherwise gets cleared, the symptom will be the PowerShell confirmation
+popup reappearing on every hold - re-run `register-exit-policy.ps1`
+elevated to fix it.
+
+If the repo ever moves/renames, re-run both `register-exit-handler.ps1`
+and `register-exit-policy.ps1` - both hardcode this repo's path.
 
 Screen timeout/sleep/hibernate and the Windows screensaver were all
 disabled directly via `powercfg` and the `ScreenSaveActive` registry value
