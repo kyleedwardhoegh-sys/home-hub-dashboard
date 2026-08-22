@@ -69,16 +69,51 @@ revert them.
 ## Live URLs
 
 - Public app: `https://kyleedwardhoegh-sys.github.io/home-hub-dashboard/`
-  (not live yet — repo needs to be pushed to GitHub and Pages enabled)
+  (live — repo is public, Pages is enabled and built)
 - Local clone: `C:\Users\Owner\source\repos\home-hub-dashboard`
+
+## Status as of 2026-08-22
+
+- GitHub repo created (public, matching siblings), pushed, Pages enabled
+  and serving (confirmed 200).
+- Task Scheduler entry `HomeHubKiosk` created (at-logon trigger, runs
+  `start-kiosk.ps1` hidden/bypass), and has already run successfully once.
+
+Confirmed mounted and running in landscape on the actual kitchen display.
+
+## Calendar (in progress)
+
+Today's events from Kyle's primary Google Calendar show inline on the
+ambient screen, below the weather pill — small pills like `📅 Practice
+5:30 PM`. No dedicated Calendar tile/agenda view (the launcher tile stays
+"Coming Soon"); this was a deliberate choice to keep it glanceable rather
+than another screen to tap into.
+
+Implementation: `updateCalendar()` in `app.js` calls the Google Calendar
+API v3 (`events.list`) directly from the browser with an API key — no
+backend, consistent with the rest of this app. This only works because
+Kyle's calendar sharing is set to public ("See all event details"); the
+key is restricted (Calendar API only, HTTP referrer locked to this repo's
+Pages URL) so it's safe to ship in client-side code.
+
+Config lives at the top of `app.js`: `GOOGLE_CALENDAR_API_KEY` (live key,
+restricted to Calendar API + this repo's Pages URL as HTTP referrer) and
+`GOOGLE_CALENDAR_ID` (defaults to Kyle's primary calendar, i.e. his email —
+change if a different calendar should be shown instead). Kyle's calendar's
+public access is set to "See all event details" (not just free/busy —
+free/busy access returns no event titles, which was tried and corrected
+2026-08-22). Refetches every 15 min, same cadence as weather. If the fetch
+fails (offline, API hiccup), the calendar line just stays hidden —
+everything else keeps working, same fail-quiet pattern as weather.
+
+Event titles are truncated with an ellipsis (`.calendar-name` in
+`styles.css`, `max-width: 46vw` on the pill) because some sources (e.g.
+Acuity Scheduling booking confirmations) produce long auto-generated
+titles like "Nash MBT Maple Grove Training Sessions (Maple Grove
+Facility)" that would blow past "glanceable from across the kitchen."
 
 ## Not yet built / open questions
 
-- The GitHub repo itself doesn't exist yet — needs `gh repo create`
-  (confirm public/private with Kyle first) and a push, then enable Pages,
-  matching the sibling repos' setup.
-- Task Scheduler entry for `start-kiosk.ps1` hasn't been created yet.
-- Portrait vs. landscape hasn't been tested on the actual kitchen display —
-  layout uses `min-aspect-ratio` breakpoints like the sibling repos, but
-  verify on the real screen once it's mounted/connected.
-- Calendar tile is a placeholder only; no calendar integration built.
+- Calendar tile is still a placeholder ("Coming Soon") — a fuller agenda
+  view behind it hasn't been built (not requested; inline-only was the
+  chosen approach as of 2026-08-22).

@@ -133,6 +133,32 @@ html, body {
 .weather-icon { font-size: 1.3em; }
 .weather-temp { font-weight: 700; }
 
+.calendar-events {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 80vw;
+}
+.calendar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 46vw;
+  font-size: clamp(13px, 1.6vw, 18px);
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.08);
+  padding: 8px 16px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+.calendar-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.calendar-time { font-weight: 700; color: var(--glow); flex-shrink: 0; }
+
 .ambient-hint {
   position: absolute;
   bottom: 5vh;
