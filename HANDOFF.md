@@ -95,26 +95,41 @@ ambient screen, below the weather pill — small pills like `📅 Practice
 "Coming Soon"); this was a deliberate choice to keep it glanceable rather
 than another screen to tap into.
 
-Implementation: `updateCalendar()` in `app.js` calls the Google Calendar
-API v3 (`events.list`) directly from the browser with an API key — no
-backend, consistent with the rest of this app. This only works because
-Kyle's calendar sharing is set to public ("See all event details"); the
-key is restricted (Calendar API only, HTTP referrer locked to this app's
-domain) so it's safe to ship in client-side code. **The referrer
-restriction must include `https://home-hub-dashboard.vercel.app/*` now
-that the kiosk loads from Vercel** — check Google Cloud Console →
-Credentials → this API key → Application restrictions if the calendar
-line ever silently stops appearing.
+Implementation (rearchitected 2026-08-22, moved server-side): `app.js`'s
+`updateCalendar()` calls this project's own `/api/calendar` serverless
+function (Vercel Node function, `api/calendar.js`), which in turn calls
+the Google Calendar API v3 (`events.list`). The Google API key now lives
+only as a Vercel **environment variable** (`GOOGLE_CALENDAR_API_KEY`,
+Production scope) — it is never sent to the browser and never committed
+to git. This replaced an earlier version that called Google directly from
+client-side JS with an embedded, referrer-restricted key; that key is
+revoked (see below) since it's permanently visible in this repo's git
+history regardless.
 
-Config lives at the top of `app.js`: `GOOGLE_CALENDAR_API_KEY` (live key,
-restricted to Calendar API + this repo's Pages URL as HTTP referrer) and
-`GOOGLE_CALENDAR_ID` (defaults to Kyle's primary calendar, i.e. his email —
-change if a different calendar should be shown instead). Kyle's calendar's
-public access is set to "See all event details" (not just free/busy —
-free/busy access returns no event titles, which was tried and corrected
-2026-08-22). Refetches every 15 min, same cadence as weather. If the fetch
-fails (offline, API hiccup), the calendar line just stays hidden —
-everything else keeps working, same fail-quiet pattern as weather.
+`api/calendar.js` always computes "today" itself in `America/Chicago`
+(hardcoded `TIMEZONE` const) rather than trusting caller-supplied dates —
+this bounds the endpoint to only ever returning today's events no matter
+who calls it, since the endpoint's URL itself isn't secret. It also only
+forwards `summary`/`start` to the client, not the full Google event object
+(which can carry descriptions, attendee emails, meeting links). CORS is
+restricted to an `ALLOWED_ORIGINS` allowlist in that file (the four Home
+Hub Vercel domains) — add a new origin there if another tool needs it.
+
+Kyle's calendar's public sharing is still set to "See all event details"
+(required for API-key access at all, regardless of where the key lives —
+free/busy-only access returns no event titles, which was tried and
+corrected 2026-08-22). This does **not** make the calendar show up in
+Google search results — that's a separate, unrelated kind of "public."
+
+Refetches every 15 min, same cadence as weather. If the fetch fails
+(offline, API hiccup, env var not set), the calendar line just stays
+hidden — everything else keeps working, same fail-quiet pattern as
+weather.
+
+**Setup dependency:** `GOOGLE_CALENDAR_API_KEY` must be set in Vercel →
+this project → Settings → Environment Variables (Production). If the
+calendar line never appears after a fresh clone/redeploy, check that
+first.
 
 Event titles are truncated with an ellipsis (`.calendar-name` in
 `styles.css`, `max-width: 46vw` on the pill) because some sources (e.g.

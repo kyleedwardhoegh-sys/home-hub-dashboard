@@ -4,9 +4,6 @@ const LON = -93.4557; // Maple Grove, MN
 const WEATHER_REFRESH_MS = 15 * 60 * 1000; // 15 min
 const IDLE_TIMEOUT_MS = 25 * 1000; // return to ambient after 25s of no touch
 
-// Google Calendar (primary calendar's sharing must be set to public — see HANDOFF.md)
-const GOOGLE_CALENDAR_API_KEY = "AIzaSyCRKm-YpuBu0TkzRIJrpbm0bxd5EwPr1zE";
-const GOOGLE_CALENDAR_ID = "kyleedwardhoegh@gmail.com";
 const CALENDAR_REFRESH_MS = 15 * 60 * 1000; // 15 min
 
 // WMO weather codes -> emoji + label
@@ -82,19 +79,12 @@ function escapeHtml(str) {
 }
 
 async function updateCalendar() {
-  if (!GOOGLE_CALENDAR_API_KEY || GOOGLE_CALENDAR_API_KEY.startsWith("PASTE_")) return;
   const calendarEl = document.getElementById("calendar-events");
   try {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events` +
-      `?key=${GOOGLE_CALENDAR_API_KEY}&timeMin=${startOfDay.toISOString()}&timeMax=${endOfDay.toISOString()}` +
-      `&singleEvents=true&orderBy=startTime&maxResults=8`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch("/api/calendar", { cache: "no-store" });
     if (!res.ok) throw new Error(`Calendar API ${res.status}`);
     const data = await res.json();
-    const events = data.items || [];
+    const events = data.events || [];
 
     if (events.length === 0) {
       calendarEl.hidden = true;
@@ -110,7 +100,7 @@ async function updateCalendar() {
     }).join("");
     calendarEl.hidden = false;
   } catch (err) {
-    // Offline, API hiccup, or key not set up yet - just leave it hidden.
+    // Offline, API hiccup, or env var not set up yet - just leave it hidden.
     console.warn("Calendar fetch failed:", err);
     calendarEl.hidden = true;
   }
