@@ -17,16 +17,16 @@ Two views, no router, toggled by touch:
    the time — designed to look good and stay glanceable from across the
    kitchen, not to be interacted with.
 2. **Launcher (tap anywhere on ambient to reveal)** — a tile grid, one tile
-   per Home Hub app, linking to each sibling's live GitHub Pages URL:
+   per Home Hub app, linking to each sibling's live Vercel deployment:
    Workouts, Practice Planner, Team Site, plus a disabled "Calendar — Coming
    Soon" tile (calendar was flagged back in `HomeHub-Web/HANDOFF.md` as the
-   natural next module). Auto-returns to the ambient view after ~25s of no
-   touch.
+   natural next module, then actually built — see "Calendar" section below).
+   Auto-returns to the ambient view after ~25s of no touch.
 
 ## Why it's built this way
 
-- **No local server dependency at runtime.** The kiosk launcher points
-  Edge at the deployed GitHub Pages URL, not `localhost` — so there's no
+- **No local server dependency at runtime.** The kiosk launcher points the
+  browser at the deployed Vercel URL, not `localhost` — so there's no
   background process (like the sibling repos' `serve.ps1`) that has to stay
   alive for the display to keep working after a reboot. `serve.ps1` is
   still here for local dev/testing before pushing, same as every sibling
@@ -49,31 +49,61 @@ Two views, no router, toggled by touch:
 
 ## Kiosk auto-launch
 
-`start-kiosk.ps1` launches Chrome (Kyle's preferred browser over Edge) in
-fullscreen kiosk mode against the live Vercel deployment, under its own
-isolated `--user-data-dir` (`%LOCALAPPDATA%\HomeHubKioskProfile`) rather
-than Kyle's regular Chrome profile — this PC is also used for everyday/dev
-work with regular Chrome open, and Chrome only honors startup flags like
-`--kiosk` when actually launching a fresh process; handing off to an
-already-running instance (same profile) silently drops `--kiosk` and just
-opens a normal window instead. The isolated profile guarantees a real
-kiosk instance every time, and also lets tooling reliably tell the kiosk
-apart from Kyle's regular browsing when checking whether it's running.
+`start-kiosk.ps1` launches Microsoft Edge (switched from Chrome 2026-08-22 —
+Kyle's deliberate choice to run a Microsoft product on Windows, not a
+technical requirement; see "Why Edge, not Chrome" below) in fullscreen
+kiosk mode against the live Vercel deployment, under its own isolated
+`--user-data-dir` (`%LOCALAPPDATA%\HomeHubKioskProfileEdge`) rather than
+Kyle's regular browser profile — this PC is also used for everyday/dev
+work with a regular browser open, and Chromium-based browsers only honor
+startup flags like `--kiosk` when actually launching a fresh process;
+handing off to an already-running instance (same profile) silently drops
+`--kiosk` and just opens a normal window instead. The isolated profile
+guarantees a real kiosk instance every time, and also lets tooling
+reliably tell the kiosk apart from Kyle's regular browsing when checking
+whether it's running. Uses `--edge-kiosk-type=fullscreen`, not the default
+`public-browsing` type — the latter is built for walk-up-and-use public
+terminals and resets the session via an on-screen "End session" button,
+which is wrong for a persistent ambient family dashboard.
 
 It's wired to two Task Scheduler entries (both at-logon-trigger, "Owner"
 user): `HomeHubKiosk` (launches once at logon) and `HomeHubKioskWatchdog`
 (runs `watchdog.ps1` every 5 minutes, relaunching the kiosk if it isn't
 running — recovers from a crash or an accidental close without needing a
-reboot).
+reboot). **The watchdog task can be paused** (`Disable-ScheduledTask
+-TaskName "HomeHubKioskWatchdog"`, `Enable-ScheduledTask` to resume) when
+Kyle is actively doing hands-on dev/testing on this machine and doesn't
+want the kiosk popping back up every 5 minutes after he closes it — the
+logon task is unaffected either way. Note this only stops the *automatic*
+recheck; manually re-running `watchdog.ps1` (e.g. while testing it)
+bypasses the pause and will relaunch the kiosk regardless.
 
-**To exit kiosk mode: Ctrl+Alt+Del → Task Manager → End Task on Chrome.**
-This is not a workaround — Chrome's `--kiosk` mode deliberately disables
+### Why Edge, not Chrome
+
+Originally built on Chrome (Kyle's general preference elsewhere). Switched
+to Edge 2026-08-22 by Kyle's explicit choice — he wanted a Microsoft
+product on his Windows system. This was evaluated first: Edge's kiosk mode
+genuinely has more purpose-built features than Chrome's bare `--kiosk` flag
+(the `public-browsing` type's on-screen "End session" button, in
+particular), but that specific feature doesn't fit this use case (see
+above), and neither browser's kiosk mode allows touch-only exit to Windows
+— both disable Alt+F4 the same way, both need Ctrl+Alt+Del either way. So
+the switch was made for the ecosystem-preference reason, not a technical
+one, and didn't require re-architecting anything beyond the executable
+path, kiosk-mode flags, and profile directory name.
+
+**To exit kiosk mode: Ctrl+Alt+Del → Task Manager → End Task on Edge.**
+This is not a workaround — Edge's `--kiosk` mode deliberately disables
 Alt+F4 and other in-browser exit shortcuts so a stray keypress can't kick
-someone out. Ctrl+Alt+Del is an OS-level secure attention sequence Chrome
-has no ability to intercept, so it's the reliable way in regardless of
-kiosk state. (Separately, Win+D or Alt+Tab let you peek at other windows —
-e.g. to check on a Claude Code session — without disturbing the kiosk at
-all; only fully closing Chrome via Task Manager stops it.)
+someone out. Ctrl+Alt+Del is an OS-level secure attention sequence the
+browser has no ability to intercept, so it's the reliable way in
+regardless of kiosk state. (Separately, Win+D or Alt+Tab let you peek at
+other windows — e.g. to check on a Claude Code session — without
+disturbing the kiosk at all; only fully closing Edge via Task Manager
+stops it.)
+
+A **touch-only exit** (no keyboard at all, for when one isn't handy) was
+requested 2026-08-22 and is still open — see "Not yet built" below.
 
 Screen timeout/sleep/hibernate and the Windows screensaver were all
 disabled directly via `powercfg` and the `ScreenSaveActive` registry value
@@ -159,3 +189,11 @@ Facility)" that would blow past "glanceable from across the kitchen."
 - Calendar tile is still a placeholder ("Coming Soon") — a fuller agenda
   view behind it hasn't been built (not requested; inline-only was the
   chosen approach as of 2026-08-22).
+- **Touch-only kiosk exit.** Currently exiting requires Ctrl+Alt+Del ->
+  Task Manager, which needs a keyboard. Proposed fix (not yet built):
+  register a custom URL scheme (e.g. `homehubadmin://exit`) pointing to a
+  small local script that kills the kiosk browser process, and add a
+  deliberately unobtrusive touch gesture to the ambient/launcher page
+  (e.g. a long-press in a corner - not something Nash or Nellie would
+  stumble into) that opens it. Works with either browser; independent of
+  the Chrome/Edge choice above.
