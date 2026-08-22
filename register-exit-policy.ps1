@@ -1,8 +1,11 @@
 # One-time setup, run as Administrator: registers a machine-level Edge
-# policy that pre-authorizes all four Home Hub apps to launch the
-# homehubadmin:// protocol WITHOUT a confirmation prompt. The exit gesture
-# (hold bottom-right corner 3s) exists on all four now, not just the
-# dashboard, so all four origins need to be listed here.
+# policy that pre-authorizes ANY origin to launch the homehubadmin://
+# protocol WITHOUT a confirmation prompt - "*" as the allowed_origins entry,
+# so the universal kiosk-extension's exit button works on any page, not
+# just a fixed list of known Home Hub apps. This is what makes the exit
+# mechanism actually universal, matching the extension's own <all_urls>
+# reach - a per-origin allowlist here would recreate the exact "have to
+# remember to add every new app" problem the extension was built to avoid.
 #
 # Why this is needed instead of just checking "Always allow" in the popup:
 # Edge's --edge-kiosk-type=fullscreen runs as an InPrivate session under the
@@ -15,12 +18,15 @@
 # InPrivate profile, so it applies every time without ever prompting.
 #
 # This is the standard mechanism Chromium-based kiosk deployments use for
-# exactly this situation (AutoLaunchProtocolsFromOrigins policy).
+# exactly this situation (AutoLaunchProtocolsFromOrigins policy). The "*"
+# wildcard for allowed_origins is untested as of this writing - if Edge
+# rejects it or still prompts, the fallback is enumerating specific origins
+# again (see git history for the prior version of this file).
 
 $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\AutoLaunchProtocolsFromOrigins"
 New-Item -Path $policyPath -Force | Out-Null
 
-$entry = '{"protocol":"homehubadmin","allowed_origins":["https://home-hub-dashboard.vercel.app","https://home-hub-web-hoegh-home.vercel.app","https://football-practice-planner-hoegh-home.vercel.app","https://maple-grove-crimson.vercel.app"]}'
+$entry = '{"protocol":"homehubadmin","allowed_origins":["*"]}'
 Set-ItemProperty -Path $policyPath -Name "1" -Value $entry
 
-Write-Host "Registered: all four Home Hub apps may auto-launch homehubadmin:// with no prompt."
+Write-Host "Registered: any origin may auto-launch homehubadmin:// with no prompt."

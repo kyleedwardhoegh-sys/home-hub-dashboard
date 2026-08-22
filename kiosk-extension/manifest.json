@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Home Hub Kiosk Navigation",
+  "version": "1.0",
+  "description": "Universal hold-to-navigate overlay (Back / Exit Kiosk) for any page shown in the Home Hub kiosk.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}
