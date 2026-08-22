@@ -1,6 +1,8 @@
 # One-time setup, run as Administrator: registers a machine-level Edge
-# policy that pre-authorizes home-hub-dashboard.vercel.app to launch the
-# homehubadmin:// protocol WITHOUT a confirmation prompt.
+# policy that pre-authorizes all four Home Hub apps to launch the
+# homehubadmin:// protocol WITHOUT a confirmation prompt. The exit gesture
+# (hold bottom-right corner 3s) exists on all four now, not just the
+# dashboard, so all four origins need to be listed here.
 #
 # Why this is needed instead of just checking "Always allow" in the popup:
 # Edge's --edge-kiosk-type=fullscreen runs as an InPrivate session under the
@@ -18,7 +20,7 @@
 $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\AutoLaunchProtocolsFromOrigins"
 New-Item -Path $policyPath -Force | Out-Null
 
-$entry = '{"protocol":"homehubadmin","allowed_origins":["https://home-hub-dashboard.vercel.app"]}'
+$entry = '{"protocol":"homehubadmin","allowed_origins":["https://home-hub-dashboard.vercel.app","https://home-hub-web-hoegh-home.vercel.app","https://football-practice-planner-hoegh-home.vercel.app","https://maple-grove-crimson.vercel.app"]}'
 Set-ItemProperty -Path $policyPath -Name "1" -Value $entry
 
-Write-Host "Registered: home-hub-dashboard.vercel.app may auto-launch homehubadmin:// with no prompt."
+Write-Host "Registered: all four Home Hub apps may auto-launch homehubadmin:// with no prompt."
