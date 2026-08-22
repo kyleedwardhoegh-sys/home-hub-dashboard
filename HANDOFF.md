@@ -103,15 +103,20 @@ disturbing the kiosk at all; only fully closing Edge via Task Manager
 stops it.)
 
 **Touch-only exit** (no keyboard at all) was requested and built 2026-08-22:
-hold the bottom-right 80x80px corner of the screen for 3 seconds, from
-either view (ambient or launcher). A small semi-transparent dot grows
+hold the bottom-right 80x80px corner of the screen for 3 seconds. Present
+on **all four Home Hub apps** (dashboard, HomeHub-Web, football-practice-
+planner, maple-grove-crimson - each has its own copy of the same small JS
+snippet, since these are independent static sites with no shared bundle),
+so exiting works no matter which app the kiosk happens to be showing, not
+just the dashboard's home screen. A small semi-transparent dot grows
 during the hold as feedback - deliberately unlabeled, not something Nash
 or Nellie would notice or stumble into. On completion it navigates to the
 custom `homehubadmin://exit` URL scheme, registered in `HKCU` (no admin
-elevation needed, via `register-exit-handler.ps1`) to run `exit-kiosk.ps1`,
-which closes the kiosk's isolated Edge process (gracefully first via
-`CloseMainWindow()`, force-killing only what's still running after 2s).
-Confirmed fully working end-to-end 2026-08-22: hold corner -> kiosk closes,
+elevation needed, via `register-exit-handler.ps1`, this repo only - the
+handler is machine-wide, not per-app) to run `exit-kiosk.ps1`, which closes
+the kiosk's isolated Edge process (gracefully first via `CloseMainWindow()`,
+force-killing only what's still running after 2s). Confirmed fully working
+end-to-end 2026-08-22: hold corner -> kiosk closes,
 no popup, no keyboard. Doesn't touch the watchdog - it'll relaunch the
 kiosk on its next 5-minute check like any other close, unless separately
 paused.
@@ -127,15 +132,30 @@ it's how InPrivate is supposed to work. The actual fix is a machine-level
 Edge policy that Edge reads fresh from the registry on every launch,
 independent of the ephemeral InPrivate profile: `register-exit-policy.ps1`
 sets `AutoLaunchProtocolsFromOrigins` under
-`HKLM\SOFTWARE\Policies\Microsoft\Edge` to pre-authorize
-`home-hub-dashboard.vercel.app` for the `homehubadmin` protocol. This is a
-**one-time, admin-elevated setup step** (run via `Start` -> search
+`HKLM\SOFTWARE\Policies\Microsoft\Edge` to pre-authorize **all four Home
+Hub app origins** (dashboard, HomeHub-Web, football-practice-planner,
+maple-grove-crimson) for the `homehubadmin` protocol - it was originally
+just the dashboard's origin, updated 2026-08-22 once the exit gesture was
+added to the other three apps too; if a new app ever gets this gesture,
+add its origin to this script's `allowed_origins` array and re-run. This
+is a **one-time, admin-elevated setup step** (run via `Start` -> search
 PowerShell -> "Run as administrator", not double-click or the Explorer
 right-click "Run with PowerShell" - the latter doesn't self-elevate and
 silently no-ops without one). If this PC is ever rebuilt or the policy
 otherwise gets cleared, the symptom will be the PowerShell confirmation
 popup reappearing on every hold - re-run `register-exit-policy.ps1`
 elevated to fix it.
+
+**Visible "up a level" navigation** (distinct from the hidden exit gesture
+above - this one's for anyone, not just Kyle) was also added 2026-08-22:
+a small 🏠 button (fixed top-left) on each app's top-level screen, linking
+back to the dashboard; and an explicit ✕ close button on expanded YouTube
+videos in HomeHub-Web and football-practice-planner, so closing a video
+doesn't rely on someone knowing to re-tap the card. Kyle's own words on
+why: "I just don't want people to get frustrated not knowing how to
+navigate." He also noted Edge's swipe-back gesture already works for
+in-kiosk back-navigation between apps, which the 🏠 button complements
+rather than replaces.
 
 If the repo ever moves/renames, re-run both `register-exit-handler.ps1`
 and `register-exit-policy.ps1` - both hardcode this repo's path.
