@@ -68,8 +68,14 @@ revert them.
 
 ## Live URLs
 
-- Public app: `https://kyleedwardhoegh-sys.github.io/home-hub-dashboard/`
-  (live — repo is public, Pages is enabled and built)
+- Public app (canonical, kiosk points here): `https://home-hub-dashboard.vercel.app/`
+  — Vercel project under the `hoegh-home` team, auto-deploys on push to
+  `main`. Migrated from GitHub Pages 2026-08-22; Deployment Protection
+  ("Vercel Authentication") is turned off so it's reachable without a
+  Vercel login, same as Pages was.
+- GitHub Pages (`https://kyleedwardhoegh-sys.github.io/home-hub-dashboard/`)
+  is still live as a side effect of Pages being enabled on the repo, but is
+  no longer the canonical URL — nothing points to it anymore.
 - Local clone: `C:\Users\Owner\source\repos\home-hub-dashboard`
 
 ## Status as of 2026-08-22
@@ -93,8 +99,12 @@ Implementation: `updateCalendar()` in `app.js` calls the Google Calendar
 API v3 (`events.list`) directly from the browser with an API key — no
 backend, consistent with the rest of this app. This only works because
 Kyle's calendar sharing is set to public ("See all event details"); the
-key is restricted (Calendar API only, HTTP referrer locked to this repo's
-Pages URL) so it's safe to ship in client-side code.
+key is restricted (Calendar API only, HTTP referrer locked to this app's
+domain) so it's safe to ship in client-side code. **The referrer
+restriction must include `https://home-hub-dashboard.vercel.app/*` now
+that the kiosk loads from Vercel** — check Google Cloud Console →
+Credentials → this API key → Application restrictions if the calendar
+line ever silently stops appearing.
 
 Config lives at the top of `app.js`: `GOOGLE_CALENDAR_API_KEY` (live key,
 restricted to Calendar API + this repo's Pages URL as HTTP referrer) and
