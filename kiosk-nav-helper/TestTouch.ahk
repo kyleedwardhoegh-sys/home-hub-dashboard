@@ -1,16 +1,15 @@
-; Standalone touch/hold diagnostic v3 - testing that we can tell a real
-; mouse right-click apart from a touch-and-hold (which Windows converts to
-; a right-click too). Without this filter, the kiosk helper was popping
-; the on-screen keyboard on every ordinary mouse right-click (e.g. a File
-; Explorer context menu), which is unusable on a PC that's also used for
-; regular desktop/mouse work.
+; Standalone touch/hold diagnostic v4 - the touch-vs-mouse signature check
+; (A_EventInfo & 0xFFFFFF00) = 0xFF515700) turned out to filter out the
+; touch-hold too, not just real mouse clicks - so that exact magic number
+; isn't right for this hardware/driver. This version shows the RAW
+; A_EventInfo value (in hex) for every right-click, mouse or touch, so we
+; can see the actual numbers instead of guessing.
 ;
 ; Just double-click this file to run it directly on the normal desktop -
 ; no kiosk mode needed.
-;   - Right-click with the MOUSE somewhere (e.g. the desktop, a file) ->
-;     should say "MOUSE right-click (ignored)", no beep.
-;   - Touch and hold on the touchscreen -> should say "TOUCH right-click
-;     (this is the real trigger)" with a beep.
+;   - Right-click with the MOUSE somewhere -> note the hex value shown.
+;   - Touch and hold on the touchscreen -> note the hex value shown.
+; Compare the two - whatever's different between them is what we filter on.
 ;
 ; Right-click the AutoHotkey tray icon (bottom-right of screen, near the
 ; clock) and choose "Exit" to stop this when done testing.
@@ -20,11 +19,7 @@
 
 ~RButton::
 {
-    if ((A_EventInfo & 0xFFFFFF00) = 0xFF515700) {
-        ToolTip("TOUCH right-click (this is the real trigger)")
-        SoundBeep(800, 300)
-    } else {
-        ToolTip("MOUSE right-click (ignored)")
-    }
-    SetTimer(() => ToolTip(), -2000)
+    ToolTip("RIGHT-CLICK, A_EventInfo = 0x" Format("{:X}", A_EventInfo))
+    SoundBeep(600, 150)
+    SetTimer(() => ToolTip(), -4000)
 }
