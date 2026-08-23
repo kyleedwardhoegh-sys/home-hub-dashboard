@@ -49,19 +49,17 @@ Two views, no router, toggled by touch:
 
 ## Kiosk auto-launch
 
-`start-kiosk.ps1` launches Microsoft Edge (switched from Chrome 2026-08-22 —
-Kyle's deliberate choice to run a Microsoft product on Windows, not a
-technical requirement; see "Why Edge, not Chrome" below) in fullscreen
-kiosk mode against the live Vercel deployment, under its own isolated
-`--user-data-dir` (`%LOCALAPPDATA%\HomeHubKioskProfileEdge`) rather than
-Kyle's regular browser profile — this PC is also used for everyday/dev
-work with a regular browser open, and Chromium-based browsers only honor
-startup flags like `--kiosk` when actually launching a fresh process;
-handing off to an already-running instance (same profile) silently drops
-`--kiosk` and just opens a normal window instead. The isolated profile
-guarantees a real kiosk instance every time, and also lets tooling
-reliably tell the kiosk apart from Kyle's regular browsing when checking
-whether it's running. Uses `--edge-kiosk-type=fullscreen`, not the default
+`start-kiosk.ps1` launches Microsoft Edge in fullscreen kiosk mode against
+the live Vercel deployment, under its own isolated `--user-data-dir`
+(`%LOCALAPPDATA%\HomeHubKioskProfileEdgeDev`) rather than Kyle's regular
+browser profile — this PC is also used for everyday/dev work with a
+regular browser open, and Chromium-based browsers only honor startup
+flags like `--kiosk` when actually launching a fresh process; handing off
+to an already-running instance (same profile) silently drops `--kiosk`
+and just opens a normal window instead. The isolated profile guarantees a
+real kiosk instance every time, and also lets tooling reliably tell the
+kiosk apart from Kyle's regular browsing when checking whether it's
+running. Uses `--edge-kiosk-type=fullscreen`, not the default
 `public-browsing` type — the latter is built for walk-up-and-use public
 terminals and resets the session via an on-screen "End session" button,
 which is wrong for a persistent ambient family dashboard.
@@ -82,83 +80,122 @@ bypasses the pause and will relaunch the kiosk regardless.
 
 Originally built on Chrome (Kyle's general preference elsewhere). Switched
 to Edge 2026-08-22 by Kyle's explicit choice — he wanted a Microsoft
-product on his Windows system. This was evaluated first: Edge's kiosk mode
-genuinely has more purpose-built features than Chrome's bare `--kiosk` flag
-(the `public-browsing` type's on-screen "End session" button, in
-particular), but that specific feature doesn't fit this use case (see
-above), and neither browser's kiosk mode allows touch-only exit to Windows
-— both disable Alt+F4 the same way, both need Ctrl+Alt+Del either way. So
-the switch was made for the ecosystem-preference reason, not a technical
-one, and didn't require re-architecting anything beyond the executable
-path, kiosk-mode flags, and profile directory name.
+product on his Windows system, not a technical requirement.
 
 **To exit kiosk mode: Ctrl+Alt+Del → Task Manager → End Task on Edge.**
-This is not a workaround — Edge's `--kiosk` mode deliberately disables
-Alt+F4 and other in-browser exit shortcuts so a stray keypress can't kick
-someone out. Ctrl+Alt+Del is an OS-level secure attention sequence the
-browser has no ability to intercept, so it's the reliable way in
-regardless of kiosk state. (Separately, Win+D or Alt+Tab let you peek at
-other windows — e.g. to check on a Claude Code session — without
-disturbing the kiosk at all; only fully closing Edge via Task Manager
-stops it.)
+This is the reliable fallback — Edge's `--kiosk` mode deliberately
+disables Alt+F4 and other in-browser exit shortcuts so a stray keypress
+can't kick someone out. Ctrl+Alt+Del is an OS-level secure attention
+sequence the browser has no ability to intercept. (Separately, Win+D or
+Alt+Tab let you peek at other windows — e.g. to check on a Claude Code
+session — without disturbing the kiosk at all; only fully closing Edge
+via Task Manager stops it.) For everyday use there's also the touch-only
+exit below, which doesn't need a keyboard at all.
 
-**Touch-only exit** (no keyboard at all) was requested and built 2026-08-22:
-hold the bottom-right 80x80px corner of the screen for 3 seconds. Present
-on **all four Home Hub apps** (dashboard, HomeHub-Web, football-practice-
-planner, maple-grove-crimson - each has its own copy of the same small JS
-snippet, since these are independent static sites with no shared bundle),
-so exiting works no matter which app the kiosk happens to be showing, not
-just the dashboard's home screen. A small semi-transparent dot grows
-during the hold as feedback - deliberately unlabeled, not something Nash
-or Nellie would notice or stumble into. On completion it navigates to the
-custom `homehubadmin://exit` URL scheme, registered in `HKCU` (no admin
-elevation needed, via `register-exit-handler.ps1`, this repo only - the
-handler is machine-wide, not per-app) to run `exit-kiosk.ps1`, which closes
-the kiosk's isolated Edge process (gracefully first via `CloseMainWindow()`,
-force-killing only what's still running after 2s). Confirmed fully working
-end-to-end 2026-08-22: hold corner -> kiosk closes,
-no popup, no keyboard. Doesn't touch the watchdog - it'll relaunch the
-kiosk on its next 5-minute check like any other close, unless separately
-paused.
+### Universal navigation: `kiosk-extension/`
 
-**Gotcha: Edge's `--edge-kiosk-type=fullscreen` runs as an InPrivate
-session** (visible in the window title as "[InPrivate]"). InPrivate
-forgets everything between launches by design - including "Always allow
-this site to open X" checkbox choices from the external-protocol
-confirmation prompt that first appears when the exit gesture navigates to
-`homehubadmin://`. So checking that box does NOT make the prompt go away
-on future launches, no matter how carefully it's done - this isn't a bug,
-it's how InPrivate is supposed to work. The actual fix is a machine-level
-Edge policy that Edge reads fresh from the registry on every launch,
-independent of the ephemeral InPrivate profile: `register-exit-policy.ps1`
+**Rearchitected 2026-08-23** after the original per-app approach (each of
+the four Home Hub repos carrying its own copy of the same gesture/button
+JS, plus a per-origin allowlist policy) turned out not to scale: every
+new app, or any page not built for this, would need the same code
+duplicated in again. Kyle's framing: "whatever gets run from our home app
+doesn't need to be modified... universal, if you touch for 3 seconds
+anywhere it will pop up a back or exit option." The per-app version was
+fully ripped out of all four repos (see git history) and replaced with a
+single browser extension, `kiosk-extension/` in this repo, loaded via
+`--load-extension` in `start-kiosk.ps1`.
+
+`kiosk-extension/content.js` is injected by the browser itself into
+**every page the kiosk shows** (`"matches": ["<all_urls>"]` in
+`manifest.json`) — not per-app code, so it works on any current or future
+Home Hub app, or even a page never built for this. Holding the
+bottom-right 70x70px corner for 3 seconds (a small semi-transparent dot
+grows as feedback — deliberately unlabeled, not something Nash or Nellie
+would stumble into) opens a small menu:
+- **⬅ Back** — `history.back()`, works on any page, no site cooperation
+  needed.
+- **✕ Exit Kiosk** — navigates to the custom `homehubadmin://exit` URL
+  scheme, registered machine-wide in `HKCU` (via `register-exit-handler.ps1`,
+  no admin elevation needed) to run `exit-kiosk.ps1`, which closes the
+  kiosk's isolated Edge process (gracefully first via `CloseMainWindow()`,
+  force-killing only what's still running after 2s).
+
+This replaced the earlier separate, per-app visible 🏠 Home button and
+video ✕ close buttons too — one universal mechanism covers both what
+those did and the hidden exit gesture. Kyle also noted Edge's swipe-back
+gesture already works for in-kiosk back-navigation between apps, which
+this complements rather than replaces.
+
+### Why Edge Dev channel, not Stable
+
+**This is the load-bearing decision that makes the extension work at
+all.** Edge Stable permanently and undismissably disables any extension
+loaded via `--load-extension` (the only way to load an unpacked one) —
+confirmed via Microsoft's own support article ("Developer mode extension
+notification"), not just observed behavior: *"To protect all Microsoft
+Edge users from any risk of exploitation through side-loading, we don't
+allow dismissing the notification... Microsoft recommends using Dev or
+Canary channel for testing your extensions."* The extension's enable
+toggle in `edge://extensions` is itself non-interactive on Stable — this
+isn't a setting to find, there genuinely is no way to keep it enabled
+there short of packaging it as a signed `.crx` and force-installing it
+via policy (real, non-trivial work: Chromium's binary CRX3 format,
+protobuf header, cryptographic signing — considered and rejected as more
+risk than switching channels).
+
+Kyle installed **Microsoft Edge Dev** (from
+[microsoftedgeinsider.com](https://www.microsoftedgeinsider.com)) on
+2026-08-23. On Dev channel, confirmed via the profile's own `Secure
+Preferences` file: the extension loads with `"disable_reasons":[]` (fully
+enabled) and no nag dialog at all, no manual toggle needed — this is the
+finding that made the whole universal-extension redesign viable.
+**Tradeoff accepted:** Dev channel updates weekly instead of Stable's
+slower cadence, a modest ongoing risk for a device that should just work,
+worth it to avoid the alternative (CRX-signing, or a from-scratch native
+overlay app outside the browser entirely — both seriously considered,
+see git history/conversation around 2026-08-23 for the full comparison).
+
+Edge Dev is a **separate installed product** from Edge Stable, with its
+own executable (`Program Files\Microsoft\Edge Dev\Application\msedge.exe`)
+and — important for policy setup — its **own registry policy path**:
+`HKLM\SOFTWARE\Policies\Microsoft\EdgeDev`, not `...\Edge`.
+
+**Gotcha carried over from Stable: `--edge-kiosk-type=fullscreen` runs as
+an InPrivate session** (visible in the window title as "[InPrivate]") on
+Dev channel too. InPrivate forgets everything between launches by design
+— including "Always allow this site to open X" checkbox choices from the
+external-protocol confirmation prompt that homehubadmin:// triggers. So
+checking that box does NOT make the prompt go away on future launches,
+no matter how carefully it's done. The fix is the same kind of
+machine-level policy pattern as the extension fix: `register-exit-policy.ps1`
 sets `AutoLaunchProtocolsFromOrigins` under
-`HKLM\SOFTWARE\Policies\Microsoft\Edge` to pre-authorize **all four Home
-Hub app origins** (dashboard, HomeHub-Web, football-practice-planner,
-maple-grove-crimson) for the `homehubadmin` protocol - it was originally
-just the dashboard's origin, updated 2026-08-22 once the exit gesture was
-added to the other three apps too; if a new app ever gets this gesture,
-add its origin to this script's `allowed_origins` array and re-run. This
-is a **one-time, admin-elevated setup step** (run via `Start` -> search
-PowerShell -> "Run as administrator", not double-click or the Explorer
-right-click "Run with PowerShell" - the latter doesn't self-elevate and
-silently no-ops without one). If this PC is ever rebuilt or the policy
-otherwise gets cleared, the symptom will be the PowerShell confirmation
-popup reappearing on every hold - re-run `register-exit-policy.ps1`
-elevated to fix it.
-
-**Visible "up a level" navigation** (distinct from the hidden exit gesture
-above - this one's for anyone, not just Kyle) was also added 2026-08-22:
-a small 🏠 button (fixed top-left) on each app's top-level screen, linking
-back to the dashboard; and an explicit ✕ close button on expanded YouTube
-videos in HomeHub-Web and football-practice-planner, so closing a video
-doesn't rely on someone knowing to re-tap the card. Kyle's own words on
-why: "I just don't want people to get frustrated not knowing how to
-navigate." He also noted Edge's swipe-back gesture already works for
-in-kiosk back-navigation between apps, which the 🏠 button complements
-rather than replaces.
+`HKLM\SOFTWARE\Policies\Microsoft\EdgeDev` with `allowed_origins: ["*"]`
+(a wildcard, not a per-origin list — matching the extension's own
+`<all_urls>` universality; untested at time of writing whether Edge
+actually honors the wildcard there, worth confirming empirically). This
+is a **one-time, admin-elevated setup step** (run via `Start` → search
+PowerShell → "Run as administrator", not double-click or the Explorer
+right-click "Run with PowerShell" — the latter doesn't self-elevate and
+silently no-ops without one). Symptom if this policy is ever missing or
+cleared: the PowerShell confirmation popup reappears on every hold.
 
 If the repo ever moves/renames, re-run both `register-exit-handler.ps1`
-and `register-exit-policy.ps1` - both hardcode this repo's path.
+and `register-exit-policy.ps1` — both hardcode this repo's path.
+
+**Status as of 2026-08-23: extension confirmed loading and enabled on
+Edge Dev (verified directly via the profile's `Secure Preferences` file).
+The corner-hold gesture itself has NOT yet been confirmed working via a
+real touch/click** — remote mouse-simulation testing gave inconsistent,
+hard-to-interpret results (likely an artifact of simulating input through
+this remote session rather than a real defect in the gesture code, which
+is standard `pointerdown`/`pointerup`/`setTimeout` JS with nothing
+Chromium-specific about it) — **next step is a real physical test on the
+actual touchscreen.** If it doesn't work, check: (1) is
+`register-exit-policy.ps1` re-run for the `EdgeDev` path specifically,
+(2) DevTools (F12) does open even in this kiosk mode, useful for checking
+`document.querySelector('#homehub-nav-marker')` exists and for reading
+`chrome.runtime.lastError`-style console output if the content script
+threw.
 
 Screen timeout/sleep/hibernate and the Windows screensaver were all
 disabled directly via `powercfg` and the `ScreenSaveActive` registry value
@@ -244,11 +281,7 @@ Facility)" that would blow past "glanceable from across the kitchen."
 - Calendar tile is still a placeholder ("Coming Soon") — a fuller agenda
   view behind it hasn't been built (not requested; inline-only was the
   chosen approach as of 2026-08-22).
-- **Touch-only kiosk exit.** Currently exiting requires Ctrl+Alt+Del ->
-  Task Manager, which needs a keyboard. Proposed fix (not yet built):
-  register a custom URL scheme (e.g. `homehubadmin://exit`) pointing to a
-  small local script that kills the kiosk browser process, and add a
-  deliberately unobtrusive touch gesture to the ambient/launcher page
-  (e.g. a long-press in a corner - not something Nash or Nellie would
-  stumble into) that opens it. Works with either browser; independent of
-  the Chrome/Edge choice above.
+- **Touch-only kiosk exit gesture is built (`kiosk-extension/`, see "Kiosk
+  auto-launch" above) but not yet confirmed with a real physical touch/
+  click** — only verified so far that the extension loads and is enabled.
+  Needs a real test on the actual touchscreen.
