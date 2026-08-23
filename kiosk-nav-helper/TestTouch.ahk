@@ -1,16 +1,16 @@
-; Standalone touch/hold diagnostic v2 - testing whether a touch-and-hold
-; is actually arriving as a RIGHT-CLICK instead of a sustained left-button
-; hold. Windows has a built-in "press and hold to right-click" gesture for
-; touchscreens that can intercept a hold before it ever reaches an app as
-; a continuously-held left button - the first version of this test showed
-; "Released after 0ms" on a real touch-hold (vs. working fine with a real
-; mouse hold), which is the telltale sign of exactly this.
+; Standalone touch/hold diagnostic v3 - testing that we can tell a real
+; mouse right-click apart from a touch-and-hold (which Windows converts to
+; a right-click too). Without this filter, the kiosk helper was popping
+; the on-screen keyboard on every ordinary mouse right-click (e.g. a File
+; Explorer context menu), which is unusable on a PC that's also used for
+; regular desktop/mouse work.
 ;
 ; Just double-click this file to run it directly on the normal desktop -
-; no kiosk mode needed. Touch and hold anywhere. If the theory is right,
-; you should see "RIGHT-CLICK detected!" appear (and hear a beep) once
-; Windows finishes recognizing the hold gesture, WITHOUT needing our own
-; 3-second timer at all.
+; no kiosk mode needed.
+;   - Right-click with the MOUSE somewhere (e.g. the desktop, a file) ->
+;     should say "MOUSE right-click (ignored)", no beep.
+;   - Touch and hold on the touchscreen -> should say "TOUCH right-click
+;     (this is the real trigger)" with a beep.
 ;
 ; Right-click the AutoHotkey tray icon (bottom-right of screen, near the
 ; clock) and choose "Exit" to stop this when done testing.
@@ -18,15 +18,13 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-~LButton::
-{
-    ToolTip("LEFT button event seen")
-    SetTimer(() => ToolTip(), -1500)
-}
-
 ~RButton::
 {
-    ToolTip("RIGHT-CLICK detected! (this is what a touch-hold likely becomes)")
-    SoundBeep(800, 300)
-    SetTimer(() => ToolTip(), -3000)
+    if ((A_EventInfo & 0xFFFFFF00) = 0xFF515700) {
+        ToolTip("TOUCH right-click (this is the real trigger)")
+        SoundBeep(800, 300)
+    } else {
+        ToolTip("MOUSE right-click (ignored)")
+    }
+    SetTimer(() => ToolTip(), -2000)
 }

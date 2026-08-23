@@ -18,6 +18,16 @@
 ; recognition completes, rather than reimplementing hold-timing that
 ; competes with the OS for the same input.
 ;
+; MUST filter to touch-originated right-clicks only - this PC also gets
+; used for everyday/dev work with a real mouse, and a genuine mouse
+; right-click (e.g. a File Explorer context menu) is otherwise
+; indistinguishable from our trigger, which popped the on-screen keyboard
+; on every ordinary right-click during testing. Windows tags touch/pen-
+; injected input with a signature in the low-level hook's extra-info field
+; (the (A_EventInfo & 0xFFFFFF00) = 0xFF515700 check below - a documented
+; AutoHotkey pattern for exactly this) that a real mouse never sets, so
+; this only fires for actual touch holds.
+;
 ; Deliberately brute-force simple after a custom always-on-top menu
 ; (Back/Exit buttons) proved hard to get rendering reliably during
 ; testing - this trades a fancier UI for something that just works, with
@@ -27,4 +37,8 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-~RButton::Run("osk.exe")
+~RButton::
+{
+    if ((A_EventInfo & 0xFFFFFF00) = 0xFF515700)
+        Run("osk.exe")
+}
