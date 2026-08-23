@@ -1,4 +1,4 @@
-# One-time setup, run as Administrator: registers a machine-level Edge
+# One-time setup, run as Administrator: registers a machine-level Edge Dev
 # policy that pre-authorizes ANY origin to launch the homehubadmin://
 # protocol WITHOUT a confirmation prompt - "*" as the allowed_origins entry,
 # so the universal kiosk-extension's exit button works on any page, not
@@ -6,6 +6,12 @@
 # mechanism actually universal, matching the extension's own <all_urls>
 # reach - a per-origin allowlist here would recreate the exact "have to
 # remember to add every new app" problem the extension was built to avoid.
+#
+# Targets EdgeDev, not Edge: the kiosk runs Edge DEV channel (switched
+# 2026-08-23 - Stable channel permanently blocks unpacked extensions, see
+# HANDOFF.md), and each Edge channel (Stable/Beta/Dev/Canary) reads
+# policies from its own separate registry path -
+# HKLM\SOFTWARE\Policies\Microsoft\EdgeDev here, not ...\Edge.
 #
 # Why this is needed instead of just checking "Always allow" in the popup:
 # Edge's --edge-kiosk-type=fullscreen runs as an InPrivate session under the
@@ -23,10 +29,10 @@
 # rejects it or still prompts, the fallback is enumerating specific origins
 # again (see git history for the prior version of this file).
 
-$policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\AutoLaunchProtocolsFromOrigins"
+$policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\EdgeDev\AutoLaunchProtocolsFromOrigins"
 New-Item -Path $policyPath -Force | Out-Null
 
 $entry = '{"protocol":"homehubadmin","allowed_origins":["*"]}'
 Set-ItemProperty -Path $policyPath -Name "1" -Value $entry
 
-Write-Host "Registered: any origin may auto-launch homehubadmin:// with no prompt."
+Write-Host "Registered: any origin may auto-launch homehubadmin:// with no prompt (Edge Dev)."
