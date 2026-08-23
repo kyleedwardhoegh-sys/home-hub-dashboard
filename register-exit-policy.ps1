@@ -35,4 +35,15 @@ New-Item -Path $policyPath -Force | Out-Null
 $entry = '{"protocol":"homehubadmin","allowed_origins":["*"]}'
 Set-ItemProperty -Path $policyPath -Name "1" -Value $entry
 
-Write-Host "Registered: any origin may auto-launch homehubadmin:// with no prompt (Edge Dev)."
+# Any mandatory policy under this registry path makes Edge consider itself
+# "managed by your organization" (confirmed via edge://management 2026-08-23
+# - this is generic Chromium behavior for ANY local machine policy, not a
+# sign of an actual external organization/Family Safety account, which was
+# investigated and ruled out). One side effect: DevTools gets blocked by
+# default on managed browsers. Explicitly re-allow it so debugging stays
+# possible - value 1 = DeveloperToolsAvailability "Allowed" (Chromium
+# policy enum: 0=default/allowed via extensions or generic, 1=allowed,
+# 2=disallowed).
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\EdgeDev" -Name "DeveloperToolsAvailability" -Value 1 -Type DWord
+
+Write-Host "Registered: any origin may auto-launch homehubadmin:// with no prompt (Edge Dev). DevTools kept available."
