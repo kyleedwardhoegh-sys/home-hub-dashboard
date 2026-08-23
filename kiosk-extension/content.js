@@ -67,10 +67,15 @@
     <button id="homehub-nav-exit">✕ Exit Kiosk</button>
   `;
 
+  // DIAGNOSTIC MODE (2026-08-23): menu forced always-open to isolate whether
+  // the extension/menu itself renders correctly, separate from whether the
+  // hold-gesture ever triggers it. Remove the "menu.classList.add('open')"
+  // line and this comment once gesture detection is confirmed working.
   function mount() {
     document.documentElement.appendChild(style);
     document.body.appendChild(marker);
     document.body.appendChild(menu);
+    menu.classList.add("open"); // DIAGNOSTIC: force always-visible
 
     menu.querySelector("#homehub-nav-back").addEventListener("click", () => {
       closeMenu();
@@ -103,8 +108,7 @@
 
   function startHold(e) {
     if (menu.classList.contains("open")) {
-      if (!e.target.closest("#homehub-nav-menu")) closeMenu();
-      return;
+      return; // DIAGNOSTIC: don't auto-close while forced open, see mount()
     }
     if (!inZone(e.clientX, e.clientY)) return;
     marker.classList.add("holding");
