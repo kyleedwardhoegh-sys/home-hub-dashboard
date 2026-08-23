@@ -8,25 +8,28 @@
 ; Manager -> End Task" exit already documented in HANDOFF.md.
 ;
 ; Triggers on RIGHT-CLICK, not a custom hold timer - confirmed by testing
-; (2026-08-23, see TestTouch.ahk) that Windows' own "press and hold to
-; right-click" touchscreen gesture intercepts a sustained touch before it
-; ever reaches an app as a continuously-held left button (GetKeyState
-; reported "0ms held" on a real touch-hold that visibly lasted seconds,
-; while a real mouse hold worked fine - the telltale sign of this OS-level
-; gesture consuming it first). So the hold-detection is already done for
-; us by Windows; we just listen for the right-click it produces once
-; recognition completes, rather than reimplementing hold-timing that
-; competes with the OS for the same input.
+; (2026-08-23, see DiagnosticRoutine.ahk results) that Windows' own "press
+; and hold to right-click" touchscreen gesture intercepts a sustained touch
+; before it ever reaches an app as a continuously-held left button. So the
+; hold-detection is already done for us by Windows; we listen for the
+; right-click it produces once recognition completes.
 ;
 ; MUST filter to touch-originated right-clicks only - this PC also gets
 ; used for everyday/dev work with a real mouse, and a genuine mouse
 ; right-click (e.g. a File Explorer context menu) is otherwise
-; indistinguishable from our trigger, which popped the on-screen keyboard
-; on every ordinary right-click during testing. Windows tags touch/pen-
-; injected input with a signature in the low-level hook's extra-info field
-; (the (A_EventInfo & 0xFFFFFF00) = 0xFF515700 check below - a documented
-; AutoHotkey pattern for exactly this) that a real mouse never sets, so
-; this only fires for actual touch holds.
+; indistinguishable from our trigger. An earlier version tried to filter
+; using A_EventInfo's touch/pen signature bits - confirmed via
+; DiagnosticRoutine.ahk that A_EventInfo is always 0x0 on this hardware,
+; so that check silently blocked everything, touch included (this is why
+; "touch and hold did nothing" after that change).
+;
+; The filter that actually works, confirmed against real logged data: a
+; touch-and-hold's RIGHT DOWN and RIGHT UP arrive at the exact same
+; millisecond (Windows delivers the synthesized click as one atomic pair
+; once its internal hold-recognition timer completes), while even a quick
+; real mouse click has some human-scale gap between press and release. So
+; we time the gap between RIGHT DOWN and RIGHT UP and only trigger if it's
+; near-instant.
 ;
 ; Deliberately brute-force simple after a custom always-on-top menu
 ; (Back/Exit buttons) proved hard to get rendering reliably during
@@ -37,8 +40,17 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
+rightDownTime := 0
+
 ~RButton::
 {
-    if ((A_EventInfo & 0xFFFFFF00) = 0xFF515700)
+    global rightDownTime
+    rightDownTime := A_TickCount
+}
+
+~RButton Up::
+{
+    global rightDownTime
+    if (A_TickCount - rightDownTime < 50)
         Run("osk.exe")
 }
