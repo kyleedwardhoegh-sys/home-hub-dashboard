@@ -27,13 +27,17 @@ steps := [
     "TOUCH AND HOLD for a full 5 seconds this time`n(longer duration), then lift"
 ]
 
-log := []
+; NOTE: this variable is named "eventLog", not "log" - "log" collides with
+; AutoHotkey's built-in Log() math function (base-10 logarithm) and can't
+; be used as a variable name (hit this exact error during testing:
+; "This Func cannot be used as an output variable. Specifically: log").
+eventLog := []
 currentStepStart := 0
 stepIndex := 0
 
 LogEvent(type) {
-    global log, currentStepStart
-    log.Push({time: A_TickCount - currentStepStart, type: type, eventInfo: Format("0x{:X}", A_EventInfo)})
+    global eventLog, currentStepStart
+    eventLog.Push({time: A_TickCount - currentStepStart, type: type, eventInfo: Format("0x{:X}", A_EventInfo)})
 }
 
 ~LButton::LogEvent("LEFT DOWN")
@@ -53,14 +57,14 @@ btnNext := mainGui.Add("Button", "w560 h50 y+10", "Next")
 btnNext.OnEvent("Click", NextStep)
 
 NextStep(*) {
-    global steps, stepIndex, log, currentStepStart, stepText, resultText, btnNext
+    global steps, stepIndex, eventLog, currentStepStart, stepText, resultText, btnNext
 
     if (stepIndex > 0) {
         summary := "=== Step " stepIndex ": " StrReplace(steps[stepIndex], "`n", " ") " ===`r`n"
-        if (log.Length = 0) {
+        if (eventLog.Length = 0) {
             summary .= "  NOTHING detected.`r`n`r`n"
         } else {
-            for entry in log
+            for entry in eventLog
                 summary .= "  " entry.type " at +" entry.time "ms, eventInfo=" entry.eventInfo "`r`n"
             summary .= "`r`n"
         }
@@ -75,7 +79,7 @@ NextStep(*) {
         return
     }
 
-    log := []
+    eventLog := []
     currentStepStart := A_TickCount
     stepText.Value := "Step " (stepIndex + 1) " of " steps.Length ": " steps[stepIndex + 1]
     btnNext.Text := (stepIndex = 0) ? "I did it - Next" : "I did it - Next"
