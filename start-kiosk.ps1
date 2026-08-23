@@ -5,6 +5,12 @@
 # Uses Microsoft Edge (switched from Chrome 2026-08-22 - Kyle's deliberate
 # choice to run a Microsoft product on Windows, not a technical requirement;
 # Edge's kiosk mode isn't meaningfully better for this single-site use case).
+# Back on Edge STABLE (reverted 2026-08-23) - the Dev channel switch and
+# --load-extension below were only ever needed for kiosk-extension/, which
+# has been replaced by kiosk-nav-helper/HomeHubNav.ahk, a native AutoHotkey
+# process that runs alongside the browser instead of inside it (see
+# HANDOFF.md). Stable no longer has anything blocking it now that there's
+# no unpacked extension to load.
 #
 # Runs under its own --user-data-dir, NOT Kyle's regular Edge/Chrome profile.
 # This PC also gets used for everyday/dev work with a regular browser open,
@@ -21,34 +27,17 @@
 # wrong for a persistent ambient family dashboard. fullscreen just shows the
 # one site with no browser UI, same behavior as the old Chrome setup.
 #
-# To exit kiosk mode: hold the bottom-right corner of the screen for 3s
-# (works on any page - see kiosk-extension/, loaded below via
-# --load-extension) and tap "Exit Kiosk". Ctrl+Alt+Del -> Task Manager ->
-# End Task on Edge also still works as a fallback. Alt+F4 does NOT work -
+# To exit kiosk mode: touch and hold anywhere on the touchscreen for 3
+# seconds (kiosk-nav-helper/HomeHubNav.ahk, running independently of the
+# browser - see HANDOFF.md) to open the On-Screen Keyboard, then
+# Ctrl+Alt+Del -> Task Manager -> End Task on Edge. Alt+F4 does NOT work -
 # Edge's kiosk mode deliberately disables it.
-#
-# --load-extension loads kiosk-extension/ (an unpacked extension, not from
-# the Store) which injects the hold-to-navigate overlay into every page the
-# kiosk shows, regardless of which Home Hub app or even a page never built
-# for this - see that folder's content.js and this repo's HANDOFF.md for
-# the full design rationale.
-#
-# Uses Edge DEV channel, not Stable (switched 2026-08-23). Stable Edge
-# force-disables any unpacked/--load-extension extension with a permanent,
-# undismissable "developer mode" warning - confirmed via Microsoft's own
-# support docs, not just observed behavior: "we don't allow dismissing the
-# notification... Microsoft recommends using Dev or Canary channel for
-# testing your extensions." Dev channel doesn't carry this restriction.
-# Tradeoff: Dev channel updates weekly instead of Stable's slower cadence -
-# accepted as the price for the extension actually working reliably. See
-# HANDOFF.md for the full investigation that led here.
 
 $url = "https://home-hub-dashboard.vercel.app/"
-$profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfileEdgeDev"
-$extensionDir = Join-Path $PSScriptRoot "kiosk-extension"
-$edge = "$env:ProgramFiles\Microsoft\Edge Dev\Application\msedge.exe"
+$profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfile"
+$edge = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
 if (-not (Test-Path $edge)) {
-  $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge Dev\Application\msedge.exe"
+  $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
 }
 
 # Always kill any existing kiosk instance first. Without this, re-running
@@ -67,7 +56,6 @@ Start-Process -FilePath $edge -ArgumentList @(
   "--kiosk", $url,
   "--edge-kiosk-type=fullscreen",
   "--user-data-dir=$profileDir",
-  "--load-extension=$extensionDir",
   "--no-first-run",
   "--disable-pinch"
 )

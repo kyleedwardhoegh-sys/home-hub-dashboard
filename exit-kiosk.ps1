@@ -1,23 +1,23 @@
-# Closes the kiosk's isolated Edge instance. Invoked via the custom
-# homehubadmin:// URL scheme (registered in HKCU by register-exit-handler.ps1),
-# which the dashboard's touch-hold gesture navigates to - this is the
-# touch-only path out of kiosk mode, no keyboard required.
+# Closes the kiosk's isolated Edge instance. Invoked by
+# kiosk-nav-helper/HomeHubNav.ahk's corner tap-and-hold button - the
+# touch-only path out of kiosk mode, no keyboard or Ctrl+Alt+Del required
+# (that path was tried and abandoned 2026-08-23: modern osk.exe no longer
+# supports sending Ctrl+Alt+Del at all, and touch-and-hold doesn't
+# translate to a real held mouse button inside a touch-aware Chromium
+# window anyway - see HANDOFF.md). This script just closes the kiosk
+# directly instead.
 #
 # Closes gracefully first (WM_CLOSE via CloseMainWindow), not a forceful
-# kill - Edge needs a moment to actually write its preferences to disk,
-# including the "Always allow this site to open PowerShell" checkbox from
-# the confirmation dialog that led here. A forceful kill immediately after
-# that checkbox is confirmed can race the write and lose it, meaning the
-# confirmation dialog would reappear on every single use instead of the one
-# time it's supposed to. Force-kill is still used as a fallback for
-# anything left running after a couple seconds (e.g. helper processes with
-# no window, or a genuine hang).
+# kill - gives Edge a moment to actually write its preferences to disk
+# before anything is force-killed. Force-kill is still used as a fallback
+# for anything left running after a couple seconds (e.g. helper processes
+# with no window, or a genuine hang).
 #
 # Does NOT disable the watchdog task - it will relaunch the kiosk on its
 # next 5-minute check, same as any other close. Pause HomeHubKioskWatchdog
 # separately if you need it to stay closed for a while.
 
-$profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfileEdge"
+$profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfile"
 
 $kioskProcs = Get-CimInstance Win32_Process -Filter "Name = 'msedge.exe'" |
   Where-Object { $_.CommandLine -like "*--user-data-dir=$profileDir*" }
