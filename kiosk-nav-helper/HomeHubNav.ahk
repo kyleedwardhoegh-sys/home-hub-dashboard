@@ -28,8 +28,14 @@ AUTO_DISMISS_MS := 8000
     if (!InZone(startX, startY))
         return
 
+    ; Deliberately GetKeyState("LButton") without the "P" (physical) mode -
+    ; "P" mode filters out injected/synthetic input at the hook level, which
+    ; broke automated testing (the hotkey fired on the down-edge but the
+    ; hold-loop below exited instantly since "P" reported not-pressed for a
+    ; synthetic mouse_event click). Logical state works correctly for both
+    ; real touch/mouse input and synthetic input.
     startTime := A_TickCount
-    while GetKeyState("LButton", "P") {
+    while GetKeyState("LButton") {
         MouseGetPos(&curX, &curY)
         if (!InZone(curX, curY))
             return
@@ -37,7 +43,7 @@ AUTO_DISMISS_MS := 8000
             ShowNavMenu()
             ; Swallow the release so it doesn't also register as a click
             ; on whatever's under the cursor once the hold completes.
-            while GetKeyState("LButton", "P")
+            while GetKeyState("LButton")
                 Sleep(50)
             return
         }
