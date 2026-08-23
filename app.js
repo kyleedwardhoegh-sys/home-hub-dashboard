@@ -49,6 +49,24 @@ const WEATHER_CODES = {
   99: ["⛈️", "Thunderstorm"],
 };
 
+// ---- Trap the swipe-back gesture at the dashboard's own edge ----
+// Edge's touch swipe-back gesture walks real browser history. If someone
+// swipes back while the dashboard is the very first/only entry, Chromium
+// runs out of history and falls through to its own internal UI (observed
+// 2026-08-23: a blank "InPrivate" landing page) instead of just staying
+// put - and that internal page sits in front of the corner-exit button
+// too, since it's Edge's own chrome rather than our page. Padding history
+// with a couple of harmless same-page entries, and re-padding on every
+// popstate, means a swipe-back from here always lands on another copy of
+// this same page instead of running off the end. Swiping back from a
+// sibling app (Workouts, etc.) to return here is unaffected - that's a
+// real cross-origin history entry underneath this padding, not replaced.
+history.pushState(null, "", location.href);
+history.pushState(null, "", location.href);
+window.addEventListener("popstate", () => {
+  history.pushState(null, "", location.href);
+});
+
 // ---- Clock ----
 function updateClock() {
   const now = new Date();
