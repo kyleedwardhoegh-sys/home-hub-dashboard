@@ -27,8 +27,12 @@
 # wrong for a persistent ambient family dashboard. fullscreen just shows the
 # one site with no browser UI, same behavior as the old Chrome setup.
 #
-# --overscroll-history-navigation=0 disables Edge's touch swipe-back/forward
-# gesture entirely. Discovered 2026-08-23: swiping back while the dashboard
+# --disable-features=OverscrollHistoryNavigation disables Edge's touch
+# swipe-back/forward gesture entirely (the older --overscroll-history-
+# navigation=0 switch this started as no longer has any effect on this
+# Chromium version - confirmed 2026-08-23, swipe-back kept working with it
+# set; this is the modern per-feature equivalent). Discovered 2026-08-23:
+# swiping back while the dashboard
 # was the first/only history entry ran Chromium out of history and fell
 # through to Edge's own internal "InPrivate" landing page - which, being
 # Edge's own chrome rather than kiosk-nav-helper's always-on-top corner
@@ -71,5 +75,5 @@ Start-Process -FilePath $edge -ArgumentList @(
   "--user-data-dir=$profileDir",
   "--no-first-run",
   "--disable-pinch",
-  "--overscroll-history-navigation=0"
+  "--disable-features=OverscrollHistoryNavigation"
 )

@@ -49,6 +49,29 @@ const WEATHER_CODES = {
   99: ["⛈️", "Thunderstorm"],
 };
 
+// ---- Swallow the first touch after regaining visibility ----
+// Dismissing something covering the kiosk (observed: the Windows lock
+// screen) can deliver that same physical touch through to whatever's
+// underneath - reported 2026-08-23: a single tap to unlock also opened a
+// launcher tile if a finger happened to land on one. Chromium reports the
+// page as hidden while the session is locked, so briefly swallowing the
+// next touch after visibility returns absorbs that one without requiring
+// people to tap twice under normal use.
+let ignoreNextTouch = false;
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    ignoreNextTouch = true;
+    setTimeout(() => { ignoreNextTouch = false; }, 400);
+  }
+});
+document.addEventListener("pointerdown", (e) => {
+  if (ignoreNextTouch) {
+    ignoreNextTouch = false;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+  }
+}, { capture: true });
+
 // ---- Clock ----
 function updateClock() {
   const now = new Date();
