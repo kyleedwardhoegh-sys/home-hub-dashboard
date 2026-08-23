@@ -18,7 +18,7 @@
 #SingleInstance Force
 
 HOLD_MS := 3000
-ZONE_SIZE := 70
+ZONE_SIZE := 5000 ; DIAGNOSTIC: hold ANYWHERE on screen, not just the corner - see if the gesture works at all before narrowing back down
 AUTO_DISMISS_MS := 8000
 
 ~LButton::
@@ -27,6 +27,8 @@ AUTO_DISMISS_MS := 8000
     MouseGetPos(&startX, &startY)
     if (!InZone(startX, startY))
         return
+    ToolTip("Touch detected - keep holding...") ; DIAGNOSTIC: instant feedback
+    SetTimer(() => ToolTip(), -1500)
 
     ; Deliberately GetKeyState("LButton") without the "P" (physical) mode -
     ; "P" mode filters out injected/synthetic input at the hook level, which
