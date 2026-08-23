@@ -67,12 +67,21 @@
     <button id="homehub-nav-exit">✕ Exit Kiosk</button>
   `;
 
-  // DIAGNOSTIC MODE (2026-08-23): menu forced always-open to isolate whether
-  // the extension/menu itself renders correctly, separate from whether the
-  // hold-gesture ever triggers it. Remove the "menu.classList.add('open')"
-  // line and this comment once gesture detection is confirmed working.
+  // DIAGNOSTIC MODE (2026-08-23): unmissable full-screen banner + menu
+  // forced always-open, to determine whether the content script runs on
+  // this page AT ALL. Remove this whole block plus the "menu.classList.add"
+  // line below once confirmed working.
+  const diagBanner = document.createElement("div");
+  diagBanner.textContent = "KIOSK EXTENSION IS RUNNING";
+  diagBanner.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0;
+    background: red; color: white; font-size: 24px; font-weight: bold;
+    text-align: center; padding: 16px; z-index: 2147483647;
+  `;
+
   function mount() {
     document.documentElement.appendChild(style);
+    document.body.appendChild(diagBanner); // DIAGNOSTIC
     document.body.appendChild(marker);
     document.body.appendChild(menu);
     menu.classList.add("open"); // DIAGNOSTIC: force always-visible
