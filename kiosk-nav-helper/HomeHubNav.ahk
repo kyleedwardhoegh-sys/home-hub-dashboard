@@ -23,6 +23,7 @@ AUTO_DISMISS_MS := 8000
 
 ~LButton::
 {
+    global HOLD_MS
     MouseGetPos(&startX, &startY)
     if (!InZone(startX, startY))
         return
