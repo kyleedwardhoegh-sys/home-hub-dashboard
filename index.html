@@ -29,6 +29,13 @@
     <div class="calendar-events" id="calendar-events" hidden></div>
   </div>
 
+  <div class="avatar-row" id="avatar-row">
+    <button class="avatar-chip" data-person="kyle" type="button">KY</button>
+    <button class="avatar-chip" data-person="logan" type="button">LO</button>
+    <button class="avatar-chip" data-person="nash" type="button">NA</button>
+    <button class="avatar-chip" data-person="nellie" type="button">NE</button>
+  </div>
+
   <div class="ambient-hint">Tap anywhere to open</div>
 </section>
 
@@ -56,6 +63,22 @@
     </div>
   </div>
 </section>
+
+<section id="person" class="view" hidden>
+  <div class="person-header" id="person-header">
+    <span class="person-badge" id="person-badge">NA</span>
+    <h1 id="person-greeting">Hey, Nash</h1>
+  </div>
+  <div class="person-content" id="person-content"></div>
+</section>
+
+<div class="celebration" id="celebration" hidden>
+  <div class="celebration-card">
+    <div class="celebration-emoji" id="celebration-emoji">🔥</div>
+    <div class="celebration-title" id="celebration-title">Nash finished a workout!</div>
+    <div class="celebration-sub" id="celebration-sub"></div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>

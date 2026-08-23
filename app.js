@@ -6,6 +6,18 @@ const IDLE_TIMEOUT_MS = 25 * 1000; // return to ambient after 25s of no touch
 
 const CALENDAR_REFRESH_MS = 15 * 60 * 1000; // 15 min
 
+const WORKOUT_API_BASE = "https://script.google.com/macros/s/AKfycbyyOY00079KTcqhRtuoE_W_OhRTZGlsHgfSTgryrTl3ZzsVFHwiA54bJ55hu7qChYyxGQ/exec";
+const WORKOUT_POLL_MS = 60 * 1000; // 1 min - frequent enough that the celebration feels close to real-time
+
+const PEOPLE = {
+  kyle:   { name: "Kyle",   initials: "KY", kind: "parent" },
+  logan:  { name: "Logan",  initials: "LO", kind: "parent" },
+  nash:   { name: "Nash",   initials: "NA", kind: "kid", apiKid: "Nash" },
+  nellie: { name: "Nellie", initials: "NE", kind: "kid", apiKid: "Nellie" },
+};
+
+let lastCalendarEvents = [];
+
 // WMO weather codes -> emoji + label
 // https://open-meteo.com/en/docs (weather_code field)
 const WEATHER_CODES = {
@@ -85,6 +97,7 @@ async function updateCalendar() {
     if (!res.ok) throw new Error(`Calendar API ${res.status}`);
     const data = await res.json();
     const events = data.events || [];
+    lastCalendarEvents = events;
 
     if (events.length === 0) {
       calendarEl.hidden = true;
@@ -103,30 +116,48 @@ async function updateCalendar() {
     // Offline, API hiccup, or env var not set up yet - just leave it hidden.
     console.warn("Calendar fetch failed:", err);
     calendarEl.hidden = true;
+    lastCalendarEvents = [];
   }
 }
 updateCalendar();
 setInterval(updateCalendar, CALENDAR_REFRESH_MS);
 
-// ---- View switching: ambient <-> launcher ----
+// ---- View switching: ambient <-> launcher <-> person ----
 const ambientView = document.getElementById("ambient");
 const launcherView = document.getElementById("launcher");
+const personView = document.getElementById("person");
 let idleTimer = null;
 
+function hideAllViews() {
+  for (const view of [ambientView, launcherView, personView]) {
+    view.classList.remove("active");
+    view.hidden = true;
+  }
+}
+
 function showLauncher() {
-  ambientView.classList.remove("active");
-  ambientView.hidden = true;
+  hideAllViews();
+  currentPersonView = null;
   launcherView.classList.add("active");
   launcherView.hidden = false;
   resetIdleTimer();
 }
 
 function showAmbient() {
-  launcherView.classList.remove("active");
-  launcherView.hidden = true;
+  hideAllViews();
+  currentPersonView = null;
   ambientView.classList.add("active");
   ambientView.hidden = false;
   clearTimeout(idleTimer);
+}
+
+function showPerson(id) {
+  renderPersonView(id);
+  hideAllViews();
+  currentPersonView = id;
+  personView.hidden = false;
+  personView.classList.add("active");
+  resetIdleTimer();
 }
 
 function resetIdleTimer() {
@@ -136,3 +167,113 @@ function resetIdleTimer() {
 
 ambientView.addEventListener("pointerdown", showLauncher);
 launcherView.addEventListener("pointerdown", resetIdleTimer);
+personView.addEventListener("pointerdown", resetIdleTimer);
+
+// ---- Avatars: tap in to a personalized board ----
+document.getElementById("avatar-row").addEventListener("pointerdown", (e) => {
+  const chip = e.target.closest(".avatar-chip");
+  if (!chip) return;
+  e.stopPropagation(); // don't also trigger the ambient view's "open launcher" handler
+  showPerson(chip.dataset.person);
+});
+
+function renderPersonView(id) {
+  const person = PEOPLE[id];
+  const contentEl = document.getElementById("person-content");
+  document.getElementById("person-badge").textContent = person.initials;
+  document.getElementById("person-greeting").textContent = `Hey, ${person.name}`;
+  personView.style.setProperty("--accent", `var(--${id})`);
+  personView.style.setProperty("--accent-dark", `var(--${id}-dark)`);
+
+  if (person.kind === "kid") {
+    const assignments = (workoutsByKid[person.apiKid] || []);
+    if (assignments.length === 0) {
+      contentEl.innerHTML = `<div class="person-empty">No workout assigned today. Enjoy the rest!</div>`;
+      return;
+    }
+    contentEl.innerHTML = assignments.map((a) => `
+      <div class="workout-card ${a.done ? "done" : ""}">
+        <span class="workout-status">${a.done ? "✓" : ""}</span>
+        <div>
+          <div class="workout-name">${escapeHtml(a.exercise)}</div>
+          <div class="workout-meta">${escapeHtml(String(a.sets))} × ${escapeHtml(String(a.reps))}</div>
+        </div>
+      </div>
+    `).join("");
+  } else {
+    if (lastCalendarEvents.length === 0) {
+      contentEl.innerHTML = `<div class="person-empty">Nothing on the calendar today.</div>`;
+      return;
+    }
+    contentEl.innerHTML = lastCalendarEvents.map((ev) => {
+      const name = escapeHtml(ev.summary || "(untitled)");
+      const time = ev.start.dateTime
+        ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : "All day";
+      return `<div class="person-event"><span>📅 ${name}</span><span class="time">${time}</span></div>`;
+    }).join("");
+  }
+}
+
+// ---- Workouts: today's assignments + completion celebration ----
+let workoutsByKid = {}; // apiKid -> assignment[]
+let seenDoneKeys = null; // null until first poll establishes a baseline
+let currentPersonView = null; // which person board is open, if any, so it can live-update
+
+function assignmentKey(a) {
+  return `${a.date}|${a.kid}|${a.exercise}`;
+}
+
+async function pollWorkouts() {
+  try {
+    const res = await fetch(`${WORKOUT_API_BASE}?action=getAssignments&_t=${Date.now()}`, { cache: "no-store" });
+    const data = await res.json();
+    const assignments = Array.isArray(data) ? data : (data.assignments || []);
+
+    const byKid = {};
+    for (const a of assignments) {
+      (byKid[a.kid] = byKid[a.kid] || []).push(a);
+    }
+    workoutsByKid = byKid;
+
+    const doneNow = new Set(assignments.filter((a) => a.done).map(assignmentKey));
+
+    if (seenDoneKeys === null) {
+      // First poll after load: just establish the baseline, don't celebrate
+      // for things that were already done before the kiosk was looking.
+      seenDoneKeys = doneNow;
+    } else {
+      for (const a of assignments) {
+        if (a.done && !seenDoneKeys.has(assignmentKey(a))) {
+          triggerCelebration(a);
+        }
+      }
+      seenDoneKeys = doneNow;
+    }
+
+    // If a kid's board happens to be open right now, refresh it live.
+    if (currentPersonView && PEOPLE[currentPersonView].kind === "kid") {
+      renderPersonView(currentPersonView);
+    }
+  } catch (err) {
+    console.warn("Workout poll failed:", err);
+  }
+}
+pollWorkouts();
+setInterval(pollWorkouts, WORKOUT_POLL_MS);
+
+const CELEBRATION_EMOJI = ["🔥", "🎉", "💪", "⭐"];
+
+function triggerCelebration(assignment) {
+  const person = Object.values(PEOPLE).find((p) => p.apiKid === assignment.kid);
+  if (!person) return;
+
+  document.getElementById("celebration-emoji").textContent =
+    CELEBRATION_EMOJI[Math.floor(Math.random() * CELEBRATION_EMOJI.length)];
+  document.getElementById("celebration-title").textContent = `${person.name} finished a workout!`;
+  document.getElementById("celebration-sub").textContent = assignment.exercise;
+
+  const celebrationEl = document.getElementById("celebration");
+  celebrationEl.hidden = false;
+  setTimeout(() => { celebrationEl.hidden = true; }, 4000);
+}
