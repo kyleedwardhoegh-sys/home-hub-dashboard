@@ -51,6 +51,18 @@ if (-not (Test-Path $edge)) {
   $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge Dev\Application\msedge.exe"
 }
 
+# Always kill any existing kiosk instance first. Without this, re-running
+# this script while the kiosk is still open just hands off to that already-
+# running process (same profile) - Chromium silently drops EVERY flag on
+# this command line when that happens, including --load-extension, so the
+# "relaunch" would keep running whatever extension code (or none) was
+# loaded at the very first launch, no matter how many times this script
+# runs afterward. This bit us directly during kiosk-extension development.
+Get-CimInstance Win32_Process -Filter "Name = 'msedge.exe'" |
+  Where-Object { $_.CommandLine -like "*--user-data-dir=$profileDir*" } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Milliseconds 500
+
 Start-Process -FilePath $edge -ArgumentList @(
   "--kiosk", $url,
   "--edge-kiosk-type=fullscreen",
