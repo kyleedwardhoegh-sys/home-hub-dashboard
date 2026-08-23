@@ -27,11 +27,24 @@
 # wrong for a persistent ambient family dashboard. fullscreen just shows the
 # one site with no browser UI, same behavior as the old Chrome setup.
 #
-# To exit kiosk mode: touch and hold anywhere on the touchscreen for 3
-# seconds (kiosk-nav-helper/HomeHubNav.ahk, running independently of the
-# browser - see HANDOFF.md) to open the On-Screen Keyboard, then
-# Ctrl+Alt+Del -> Task Manager -> End Task on Edge. Alt+F4 does NOT work -
-# Edge's kiosk mode deliberately disables it.
+# --overscroll-history-navigation=0 disables Edge's touch swipe-back/forward
+# gesture entirely. Discovered 2026-08-23: swiping back while the dashboard
+# was the first/only history entry ran Chromium out of history and fell
+# through to Edge's own internal "InPrivate" landing page - which, being
+# Edge's own chrome rather than kiosk-nav-helper's always-on-top corner
+# buttons, could sit in front of them. A same-page history-padding trick
+# (briefly tried in app.js, since removed) didn't reliably stop it either -
+# the swipe gesture's preview appears to peek at a layer beneath what JS
+# history can influence. Disabling the gesture outright closes this for
+# good, at the cost of losing swipe-back as a way to return from a sibling
+# app to the dashboard - kiosk-nav-helper's Home corner button (bottom-left)
+# is the intended replacement for that, not just for kiosk exit.
+#
+# Exit and Home are both touch-and-hold native corner buttons drawn by
+# kiosk-nav-helper/HomeHubNav.ahk, running independently of the browser -
+# see HANDOFF.md. Bottom-right closes the kiosk; bottom-left relaunches it
+# fresh at the dashboard's ambient clock screen. Neither needs a keyboard
+# or Ctrl+Alt+Del.
 
 $url = "https://home-hub-dashboard.vercel.app/"
 $profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfile"
@@ -57,5 +70,6 @@ Start-Process -FilePath $edge -ArgumentList @(
   "--edge-kiosk-type=fullscreen",
   "--user-data-dir=$profileDir",
   "--no-first-run",
-  "--disable-pinch"
+  "--disable-pinch",
+  "--overscroll-history-navigation=0"
 )
