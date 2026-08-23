@@ -1,11 +1,16 @@
-; Standalone touch/hold diagnostic - NOT part of the kiosk setup, doesn't
-; need Task Scheduler or kiosk mode running. Just double-click this file to
-; run it directly on the normal desktop, then touch and hold anywhere on
-; the screen. Gives live feedback so we can see exactly what's happening:
-;   - "TOUCH DOWN detected" the instant a press registers at all
-;   - a running "Holding... Xms" counter while held
-;   - a beep + "HELD 3 SECONDS" message if the hold completes
-;   - a "Released after Xms" message if it's let go early
+; Standalone touch/hold diagnostic v2 - testing whether a touch-and-hold
+; is actually arriving as a RIGHT-CLICK instead of a sustained left-button
+; hold. Windows has a built-in "press and hold to right-click" gesture for
+; touchscreens that can intercept a hold before it ever reaches an app as
+; a continuously-held left button - the first version of this test showed
+; "Released after 0ms" on a real touch-hold (vs. working fine with a real
+; mouse hold), which is the telltale sign of exactly this.
+;
+; Just double-click this file to run it directly on the normal desktop -
+; no kiosk mode needed. Touch and hold anywhere. If the theory is right,
+; you should see "RIGHT-CLICK detected!" appear (and hear a beep) once
+; Windows finishes recognizing the hold gesture, WITHOUT needing our own
+; 3-second timer at all.
 ;
 ; Right-click the AutoHotkey tray icon (bottom-right of screen, near the
 ; clock) and choose "Exit" to stop this when done testing.
@@ -15,21 +20,13 @@
 
 ~LButton::
 {
-    ToolTip("TOUCH DOWN detected!")
-    startTime := A_TickCount
-    while GetKeyState("LButton") {
-        elapsed := A_TickCount - startTime
-        ToolTip("Holding... " elapsed "ms")
-        if (elapsed >= 3000) {
-            ToolTip("HELD 3 SECONDS - gesture works!")
-            SoundBeep(800, 300)
-            while GetKeyState("LButton")
-                Sleep(50)
-            SetTimer(() => ToolTip(), -3000)
-            return
-        }
-        Sleep(50)
-    }
-    ToolTip("Released after " (A_TickCount - startTime) "ms (didn't reach 3000ms)")
+    ToolTip("LEFT button event seen")
+    SetTimer(() => ToolTip(), -1500)
+}
+
+~RButton::
+{
+    ToolTip("RIGHT-CLICK detected! (this is what a touch-hold likely becomes)")
+    SoundBeep(800, 300)
     SetTimer(() => ToolTip(), -3000)
 }
