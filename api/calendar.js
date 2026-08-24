@@ -1,9 +1,7 @@
 // Serverless proxy for Google Calendar so the API key never ships to the
-// browser. The window always starts "today" as computed here (Kyle's
-// timezone), not from a caller-supplied start date - a caller can widen
-// how many days ahead it sees (?days=N, for the agenda view) but can't
-// point this endpoint at an arbitrary date.
-const MAX_DAYS = 14;
+// browser. "Today" is always computed here (Kyle's timezone), not from
+// caller-supplied params, so this endpoint can only ever return today's
+// events regardless of who calls it.
 const CALENDAR_ID = "kyleedwardhoegh@gmail.com";
 const TIMEZONE = "America/Chicago";
 const ALLOWED_ORIGINS = new Set([
@@ -44,15 +42,12 @@ export default async function handler(req, res) {
   const y = zonedNow.getUTCFullYear();
   const m = zonedNow.getUTCMonth();
   const d = zonedNow.getUTCDate();
-  const requestedDays = parseInt(req.query?.days, 10);
-  const days = Number.isFinite(requestedDays) ? Math.min(Math.max(requestedDays, 1), MAX_DAYS) : 1;
-
   const startOfDay = new Date(Date.UTC(y, m, d) - offsetMs);
-  const endOfDay = new Date(Date.UTC(y, m, d + days) - offsetMs);
+  const endOfDay = new Date(Date.UTC(y, m, d + 1) - offsetMs);
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events` +
     `?key=${apiKey}&timeMin=${startOfDay.toISOString()}&timeMax=${endOfDay.toISOString()}` +
-    `&singleEvents=true&orderBy=startTime&maxResults=${days > 1 ? 40 : 8}`;
+    `&singleEvents=true&orderBy=startTime&maxResults=8`;
 
   try {
     const googleRes = await fetch(url);

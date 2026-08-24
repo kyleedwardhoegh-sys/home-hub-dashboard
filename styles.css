@@ -272,69 +272,7 @@ html, body {
 .tile-workouts { background: linear-gradient(150deg, var(--workouts), var(--workouts-dark)); }
 .tile-football { background: linear-gradient(150deg, var(--football), var(--football-dark)); }
 .tile-team { background: linear-gradient(150deg, var(--team), var(--team-dark)); }
-.tile-calendar {
-  background: linear-gradient(150deg, var(--calendar), var(--calendar-dark));
-  font-family: inherit;
-}
-
-/* ---------- Calendar (agenda) view ---------- */
-
-#calendar-view {
-  background: var(--bg);
-  color: var(--ink);
-  padding: max(32px, env(safe-area-inset-top)) 24px 40px;
-  min-height: 100vh;
-}
-
-.agenda {
-  max-width: 900px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.agenda-day-header {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--calendar-dark);
-  margin-bottom: 10px;
-}
-.agenda-day-header .today-flag {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #fff;
-  background: var(--calendar);
-  padding: 3px 10px;
-  border-radius: 999px;
-  margin-left: 10px;
-  vertical-align: middle;
-}
-
-.agenda-events { display: flex; flex-direction: column; gap: 10px; }
-.agenda-event {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 16px 22px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-  font-size: 17px;
-}
-.agenda-event .time {
-  font-weight: 700;
-  color: var(--calendar-dark);
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.agenda-day-empty {
-  color: var(--muted);
-  font-size: 15px;
-  font-style: italic;
-}
+.tile-calendar { background: linear-gradient(150deg, var(--calendar), var(--calendar-dark)); }
 
 /* ---------- Person view ---------- */
 
