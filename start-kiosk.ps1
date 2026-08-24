@@ -46,10 +46,14 @@
 #
 # Exit, Home, and Back are all plain-tap native corner buttons drawn by
 # kiosk-nav-helper/HomeHubNav.ahk, running independently of the browser -
-# see HANDOFF.md. Bottom-right closes the kiosk; bottom-left relaunches it
-# fresh at the dashboard's ambient clock screen; top-right sends a browser
-# back-navigation (Alt+Left) so returning from a sibling app doesn't need
-# a full relaunch. None of them need a keyboard or Ctrl+Alt+Del.
+# see HANDOFF.md. Bottom-right closes the kiosk. Bottom-left (Home) and
+# top-right (Back) both navigate the already-running tab via Chrome
+# DevTools Protocol (kiosk-nav-helper/cdp-nav.ps1) instead of relaunching
+# the browser process - changed 2026-08-24 after a full relaunch proved
+# too heavy for something as routine as "go back to the dashboard".
+# --remote-debugging-port=9222 below is what makes that possible; Chromium
+# binds it to 127.0.0.1 only, not exposed off this machine. None of the
+# three corner buttons need a keyboard or Ctrl+Alt+Del.
 
 $url = "https://home-hub-dashboard.vercel.app/"
 $profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfile"
@@ -95,5 +99,6 @@ Start-Process -FilePath $edge -ArgumentList @(
   "--user-data-dir=$profileDir",
   "--no-first-run",
   "--disable-pinch",
-  "--disable-features=OverscrollHistoryNavigation"
+  "--disable-features=OverscrollHistoryNavigation",
+  "--remote-debugging-port=9222"
 )

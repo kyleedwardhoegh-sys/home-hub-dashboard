@@ -6,15 +6,18 @@
 ; reliably - see HANDOFF.md for why that distinction matters here),
 ; sitting above the kiosk:
 ;
-;   - Top-right: BACK. Tap to send Alt+Left (browser back-navigation) to
-;     the kiosk - the lightweight way to return from a sibling app to
-;     whatever was open before it, without a full relaunch.
-;   - Bottom-left: HOME. Tap to return to the dashboard's ambient clock
-;     screen specifically (runs start-kiosk.ps1, which kills any running
-;     kiosk instance and relaunches fresh - the simplest way to guarantee
-;     landing back on the ambient view no matter how deep Back would
-;     otherwise have to walk).
-;   - Bottom-right: EXIT. Tap to close the kiosk entirely (exit-kiosk.ps1).
+;   - Top-right: BACK. Tap to run history.back() on the kiosk tab via
+;     cdp-nav.ps1 - one real step back, same as a browser back button.
+;   - Bottom-left: HOME. Tap to navigate the kiosk tab straight to the
+;     dashboard's ambient clock screen (also via cdp-nav.ps1). Changed
+;     2026-08-24 from relaunching the whole Edge process (start-kiosk.ps1)
+;     - that worked but was needlessly heavy for something this routine,
+;     and force-killing Edge on every tap was found to be losing
+;     just-signed-in Google sessions before Chromium finished writing them
+;     to disk. Navigating the existing tab avoids both problems.
+;   - Bottom-right: EXIT. Tap to close the kiosk entirely (exit-kiosk.ps1)
+;     - this one still needs the process to actually end, so it's the one
+;     button left that isn't just a tab navigation.
 ;
 ; Top-right/bottom-left/bottom-right were chosen specifically to avoid the
 ; ambient view's own avatar tap-in chips, which live in the top-left
@@ -46,11 +49,13 @@
 BTN_SIZE := 44
 MARGIN := 8
 repoRoot := A_ScriptDir "\.."
+psPrefix := 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "'
+cdpScript := A_ScriptDir "\cdp-nav.ps1"
 
 BUTTONS := [
-    { id: "back", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: MARGIN,                             key: "!{Left}", script: "" },
-    { id: "home", x: MARGIN,                            y: A_ScreenHeight - BTN_SIZE - MARGIN, key: "",        script: repoRoot "\start-kiosk.ps1" },
-    { id: "exit", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: A_ScreenHeight - BTN_SIZE - MARGIN,  key: "",        script: repoRoot "\exit-kiosk.ps1" }
+    { id: "back", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: MARGIN,                             cmd: psPrefix cdpScript '" -Action back' },
+    { id: "home", x: MARGIN,                            y: A_ScreenHeight - BTN_SIZE - MARGIN, cmd: psPrefix cdpScript '" -Action home' },
+    { id: "exit", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: A_ScreenHeight - BTN_SIZE - MARGIN,  cmd: psPrefix repoRoot '\exit-kiosk.ps1"' }
 ]
 
 for btn in BUTTONS {
@@ -79,11 +84,7 @@ activeButton := ""
 ~LButton Up::
 {
     global activeButton
-    if (activeButton) {
-        if (activeButton.key)
-            Send(activeButton.key)
-        else if (activeButton.script)
-            Run('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' activeButton.script '"')
-    }
+    if (activeButton)
+        Run(activeButton.cmd)
     activeButton := ""
 }
