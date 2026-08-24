@@ -6,33 +6,39 @@
 ; see HANDOFF.md for why that distinction matters here) in the bottom
 ; corners of the screen, sitting above the kiosk:
 ;
-;   - Bottom-right: EXIT. Tap and hold ~1.5s to close the kiosk entirely
-;     (runs exit-kiosk.ps1).
-;   - Bottom-left: HOME. Tap and hold ~1.5s to return to the dashboard's
-;     ambient clock screen (runs start-kiosk.ps1, which already kills any
-;     running kiosk instance and relaunches fresh - the simplest possible
-;     way to guarantee landing back on the ambient view, and the same
-;     script already used by the desktop shortcut and at-logon task).
+;   - Bottom-right: EXIT. Tap to close the kiosk entirely (exit-kiosk.ps1).
+;   - Bottom-left: HOME. Tap to return to the dashboard's ambient clock
+;     screen (runs start-kiosk.ps1, which already kills any running kiosk
+;     instance and relaunches fresh - the simplest possible way to
+;     guarantee landing back on the ambient view, and the same script
+;     already used by the desktop shortcut and at-logon task).
 ;
 ; Bottom-left was chosen for Home (not top-left) specifically to avoid
 ; sitting under the dashboard's own avatar tap-in chips, which live in the
 ; ambient view's top-left corner.
 ;
+; PLAIN TAP, not tap-and-hold (changed 2026-08-24). The original hold
+; design depended on EloConfig's Touch Mode being set to "Click on
+; Finger-up" + "Enable Drag" - the only mode where a stationary touch
+; produces a genuinely time-tracked held button (see HANDOFF.md). That
+; mode turned out to break ordinary single-clicks elsewhere on the system
+; (e.g. the taskbar), so it got reverted back to Elo's default "Normal
+; (emulate physical mouse)" - which is required for the rest of the PC to
+; work normally, but under which a touch (tap OR hold) always resolves to
+; an immediate down+up pair, indistinguishable by duration. Since a hold
+; can no longer be measured at all in Normal mode, these buttons trigger
+; on a plain tap instead. Accidental taps aren't a real concern - both hit
+; targets are small (44px) and tucked into corners nothing else on screen
+; occupies.
+;
 ; This is the THIRD design for kiosk exit specifically (see HANDOFF.md for
 ; the full history) - a touch-and-hold-anywhere gesture and an
 ; on-screen-keyboard both foundered on Chromium owning touch input inside
-; its own window. Home is new as of 2026-08-23, added alongside disabling
-; Edge's swipe-back gesture entirely (--overscroll-history-navigation=0 in
-; start-kiosk.ps1): swipe-back could run off the edge of history into
-; Edge's own internal UI, which sat in front of these buttons since it's
-; Edge's chrome rather than the kiosk page. Home is the intended
-; replacement for "swipe back to the dashboard from a sibling app", not
-; just a kiosk-exit affordance.
+; its own window.
 
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-HOLD_MS := 1500
 BTN_SIZE := 44
 repoRoot := A_ScriptDir "\.."
 
@@ -49,13 +55,11 @@ for btn in BUTTONS {
     btn.hwnd := btnGui.Hwnd
 }
 
-downTime := 0
-triggered := false
 activeButton := ""
 
 ~LButton::
 {
-    global downTime, triggered, activeButton, BUTTONS
+    global activeButton, BUTTONS
     MouseGetPos(, , &winUnderMouse)
     activeButton := ""
     for btn in BUTTONS {
@@ -64,29 +68,12 @@ activeButton := ""
             break
         }
     }
-    if (!activeButton)
-        return
-    downTime := A_TickCount
-    triggered := false
-    SetTimer(CheckHold, 50)
-}
-
-CheckHold() {
-    global downTime, triggered, HOLD_MS, activeButton
-    if (!activeButton || !GetKeyState("LButton")) {
-        SetTimer(CheckHold, 0)
-        return
-    }
-    if (!triggered && (A_TickCount - downTime) >= HOLD_MS) {
-        triggered := true
-        SetTimer(CheckHold, 0)
-        Run('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' activeButton.script '"')
-    }
 }
 
 ~LButton Up::
 {
     global activeButton
-    SetTimer(CheckHold, 0)
+    if (activeButton)
+        Run('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' activeButton.script '"')
     activeButton := ""
 }
