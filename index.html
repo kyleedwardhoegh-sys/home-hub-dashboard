@@ -56,12 +56,18 @@
       <span class="tile-emoji">🏆</span>
       <span class="tile-name">Team Site</span>
     </a>
-    <div class="tile tile-calendar tile-soon">
+    <button class="tile tile-calendar" id="tile-calendar" type="button">
       <span class="tile-emoji">📅</span>
       <span class="tile-name">Calendar</span>
-      <span class="tile-badge">Coming Soon</span>
-    </div>
+    </button>
   </div>
+</section>
+
+<section id="calendar-view" class="view" hidden>
+  <div class="launcher-header">
+    <h1>This Week</h1>
+  </div>
+  <div class="agenda" id="agenda-content"></div>
 </section>
 
 <section id="person" class="view" hidden>

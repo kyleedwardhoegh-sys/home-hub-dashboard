@@ -145,14 +145,15 @@ async function updateCalendar() {
 updateCalendar();
 setInterval(updateCalendar, CALENDAR_REFRESH_MS);
 
-// ---- View switching: ambient <-> launcher <-> person ----
+// ---- View switching: ambient <-> launcher <-> person <-> calendar ----
 const ambientView = document.getElementById("ambient");
 const launcherView = document.getElementById("launcher");
 const personView = document.getElementById("person");
+const calendarView = document.getElementById("calendar-view");
 let idleTimer = null;
 
 function hideAllViews() {
-  for (const view of [ambientView, launcherView, personView]) {
+  for (const view of [ambientView, launcherView, personView, calendarView]) {
     view.classList.remove("active");
     view.hidden = true;
   }
@@ -183,6 +184,15 @@ function showPerson(id) {
   resetIdleTimer();
 }
 
+function showCalendarView() {
+  renderAgenda();
+  hideAllViews();
+  currentPersonView = null;
+  calendarView.hidden = false;
+  calendarView.classList.add("active");
+  resetIdleTimer();
+}
+
 function resetIdleTimer() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(showAmbient, IDLE_TIMEOUT_MS);
@@ -191,6 +201,56 @@ function resetIdleTimer() {
 ambientView.addEventListener("pointerdown", showLauncher);
 launcherView.addEventListener("pointerdown", resetIdleTimer);
 personView.addEventListener("pointerdown", resetIdleTimer);
+calendarView.addEventListener("pointerdown", resetIdleTimer);
+
+document.getElementById("tile-calendar").addEventListener("pointerdown", (e) => {
+  e.stopPropagation();
+  showCalendarView();
+});
+
+const AGENDA_DAYS = 7;
+
+async function renderAgenda() {
+  const contentEl = document.getElementById("agenda-content");
+  contentEl.innerHTML = `<div class="agenda-day-empty">Loading…</div>`;
+  try {
+    const res = await fetch(`/api/calendar?days=${AGENDA_DAYS}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Calendar API ${res.status}`);
+    const data = await res.json();
+    const events = data.events || [];
+
+    const todayKey = new Date().toDateString();
+    const byDay = new Map();
+    for (let i = 0; i < AGENDA_DAYS; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      byDay.set(d.toDateString(), { date: d, events: [] });
+    }
+    for (const ev of events) {
+      const evDate = new Date(ev.start.dateTime || ev.start.date);
+      const key = evDate.toDateString();
+      if (byDay.has(key)) byDay.get(key).events.push(ev);
+    }
+
+    contentEl.innerHTML = Array.from(byDay.values()).map(({ date, events }) => {
+      const label = date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+      const todayBadge = date.toDateString() === todayKey ? `<span class="today-flag">Today</span>` : "";
+      const body = events.length === 0
+        ? `<div class="agenda-day-empty">Nothing scheduled</div>`
+        : `<div class="agenda-events">${events.map((ev) => {
+            const name = escapeHtml(ev.summary || "(untitled)");
+            const time = ev.start.dateTime
+              ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+              : "All day";
+            return `<div class="agenda-event"><span>${name}</span><span class="time">${time}</span></div>`;
+          }).join("")}</div>`;
+      return `<div><div class="agenda-day-header">${label}${todayBadge}</div>${body}</div>`;
+    }).join("");
+  } catch (err) {
+    console.warn("Agenda fetch failed:", err);
+    contentEl.innerHTML = `<div class="agenda-day-empty">Couldn't load the calendar right now.</div>`;
+  }
+}
 
 // ---- Avatars: tap in to a personalized board ----
 document.getElementById("avatar-row").addEventListener("pointerdown", (e) => {
