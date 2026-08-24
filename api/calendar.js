@@ -24,9 +24,26 @@ export default async function handler(req, res) {
     return;
   }
 
-  const todayInTz = new Date(new Date().toLocaleString("en-US", { timeZone: TIMEZONE }));
-  const startOfDay = new Date(todayInTz.getFullYear(), todayInTz.getMonth(), todayInTz.getDate());
-  const endOfDay = new Date(todayInTz.getFullYear(), todayInTz.getMonth(), todayInTz.getDate() + 1);
+  // "Today" boundaries in TIMEZONE, computed without assuming anything
+  // about the serverless runtime's own local timezone (Vercel doesn't
+  // guarantee one). Comparing the same instant formatted in TIMEZONE vs.
+  // UTC gives the real current offset (DST-aware), and that same
+  // systematic shift cancels out of both round-trips - so this is correct
+  // regardless of what timezone this function happens to execute in. The
+  // previous version re-parsed a TIMEZONE-formatted string directly and
+  // only produced the right date when the runtime's local zone was UTC -
+  // fragile, and wrong right around midnight otherwise (reported
+  // 2026-08-24 as the calendar showing "yesterday").
+  const now = new Date();
+  const offsetMs =
+    new Date(now.toLocaleString("en-US", { timeZone: TIMEZONE })).getTime() -
+    new Date(now.toLocaleString("en-US", { timeZone: "UTC" })).getTime();
+  const zonedNow = new Date(now.getTime() + offsetMs);
+  const y = zonedNow.getUTCFullYear();
+  const m = zonedNow.getUTCMonth();
+  const d = zonedNow.getUTCDate();
+  const startOfDay = new Date(Date.UTC(y, m, d) - offsetMs);
+  const endOfDay = new Date(Date.UTC(y, m, d + 1) - offsetMs);
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events` +
     `?key=${apiKey}&timeMin=${startOfDay.toISOString()}&timeMax=${endOfDay.toISOString()}` +
