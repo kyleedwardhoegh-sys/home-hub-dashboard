@@ -1,21 +1,25 @@
 ; Kiosk navigation. Runs alongside the kiosk browser as its own native
 ; process - not a browser extension, not injected into any page - so it
 ; works no matter what's on screen and needs zero changes to any Home Hub
-; app. Draws two small always-on-top native windows (plain win32 windows,
-; not touch-aware, so touch on them translates to normal clicks reliably -
-; see HANDOFF.md for why that distinction matters here) in the bottom
-; corners of the screen, sitting above the kiosk:
+; app. Draws three small always-on-top native windows (plain win32
+; windows, not touch-aware, so touch on them translates to normal clicks
+; reliably - see HANDOFF.md for why that distinction matters here),
+; sitting above the kiosk:
 ;
-;   - Bottom-right: EXIT. Tap to close the kiosk entirely (exit-kiosk.ps1).
+;   - Top-right: BACK. Tap to send Alt+Left (browser back-navigation) to
+;     the kiosk - the lightweight way to return from a sibling app to
+;     whatever was open before it, without a full relaunch.
 ;   - Bottom-left: HOME. Tap to return to the dashboard's ambient clock
-;     screen (runs start-kiosk.ps1, which already kills any running kiosk
-;     instance and relaunches fresh - the simplest possible way to
-;     guarantee landing back on the ambient view, and the same script
-;     already used by the desktop shortcut and at-logon task).
+;     screen specifically (runs start-kiosk.ps1, which kills any running
+;     kiosk instance and relaunches fresh - the simplest way to guarantee
+;     landing back on the ambient view no matter how deep Back would
+;     otherwise have to walk).
+;   - Bottom-right: EXIT. Tap to close the kiosk entirely (exit-kiosk.ps1).
 ;
-; Bottom-left was chosen for Home (not top-left) specifically to avoid
-; sitting under the dashboard's own avatar tap-in chips, which live in the
-; ambient view's top-left corner.
+; Top-right/bottom-left/bottom-right were chosen specifically to avoid the
+; ambient view's own avatar tap-in chips, which live in the top-left
+; corner - these are native overlay windows, not part of any page, so
+; they'd otherwise visually collide with the dashboard's own UI.
 ;
 ; PLAIN TAP, not tap-and-hold (changed 2026-08-24). The original hold
 ; design depended on EloConfig's Touch Mode being set to "Click on
@@ -27,7 +31,7 @@
 ; work normally, but under which a touch (tap OR hold) always resolves to
 ; an immediate down+up pair, indistinguishable by duration. Since a hold
 ; can no longer be measured at all in Normal mode, these buttons trigger
-; on a plain tap instead. Accidental taps aren't a real concern - both hit
+; on a plain tap instead. Accidental taps aren't a real concern - all hit
 ; targets are small (44px) and tucked into corners nothing else on screen
 ; occupies.
 ;
@@ -40,17 +44,19 @@
 #SingleInstance Force
 
 BTN_SIZE := 44
+MARGIN := 8
 repoRoot := A_ScriptDir "\.."
 
 BUTTONS := [
-    { id: "exit", x: A_ScreenWidth - BTN_SIZE - 8, script: repoRoot "\exit-kiosk.ps1" },
-    { id: "home", x: 8,                            script: repoRoot "\start-kiosk.ps1" }
+    { id: "back", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: MARGIN,                             key: "!{Left}", script: "" },
+    { id: "home", x: MARGIN,                            y: A_ScreenHeight - BTN_SIZE - MARGIN, key: "",        script: repoRoot "\start-kiosk.ps1" },
+    { id: "exit", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: A_ScreenHeight - BTN_SIZE - MARGIN,  key: "",        script: repoRoot "\exit-kiosk.ps1" }
 ]
 
 for btn in BUTTONS {
     btnGui := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000")
     btnGui.BackColor := "404040"
-    btnGui.Show(Format("w{1} h{1} x{2} y{3} NoActivate", BTN_SIZE, btn.x, A_ScreenHeight - BTN_SIZE - 8))
+    btnGui.Show(Format("w{1} h{1} x{2} y{3} NoActivate", BTN_SIZE, btn.x, btn.y))
     WinSetRegion(Format("0-0 W{1} H{1} R{1}-{1}", BTN_SIZE), btnGui)
     btn.hwnd := btnGui.Hwnd
 }
@@ -73,7 +79,11 @@ activeButton := ""
 ~LButton Up::
 {
     global activeButton
-    if (activeButton)
-        Run('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' activeButton.script '"')
+    if (activeButton) {
+        if (activeButton.key)
+            Send(activeButton.key)
+        else if (activeButton.script)
+            Run('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' activeButton.script '"')
+    }
     activeButton := ""
 }

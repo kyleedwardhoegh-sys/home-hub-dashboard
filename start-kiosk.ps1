@@ -32,8 +32,8 @@
 # navigation=0 switch this started as no longer has any effect on this
 # Chromium version - confirmed 2026-08-23, swipe-back kept working with it
 # set; this is the modern per-feature equivalent). Discovered 2026-08-23:
-# swiping back while the dashboard
-# was the first/only history entry ran Chromium out of history and fell
+# swiping back while the dashboard was the first/only history entry ran
+# Chromium out of history and fell
 # through to Edge's own internal "InPrivate" landing page - which, being
 # Edge's own chrome rather than kiosk-nav-helper's always-on-top corner
 # buttons, could sit in front of them. A same-page history-padding trick
@@ -44,11 +44,12 @@
 # app to the dashboard - kiosk-nav-helper's Home corner button (bottom-left)
 # is the intended replacement for that, not just for kiosk exit.
 #
-# Exit and Home are both touch-and-hold native corner buttons drawn by
+# Exit, Home, and Back are all plain-tap native corner buttons drawn by
 # kiosk-nav-helper/HomeHubNav.ahk, running independently of the browser -
 # see HANDOFF.md. Bottom-right closes the kiosk; bottom-left relaunches it
-# fresh at the dashboard's ambient clock screen. Neither needs a keyboard
-# or Ctrl+Alt+Del.
+# fresh at the dashboard's ambient clock screen; top-right sends a browser
+# back-navigation (Alt+Left) so returning from a sibling app doesn't need
+# a full relaunch. None of them need a keyboard or Ctrl+Alt+Del.
 
 $url = "https://home-hub-dashboard.vercel.app/"
 $profileDir = "$env:LOCALAPPDATA\HomeHubKioskProfile"
@@ -64,10 +65,29 @@ if (-not (Test-Path $edge)) {
 # "relaunch" would keep running whatever extension code (or none) was
 # loaded at the very first launch, no matter how many times this script
 # runs afterward. This bit us directly during kiosk-extension development.
+#
+# Close gracefully first (WM_CLOSE via CloseMainWindow), not a forceful
+# kill - same reasoning as exit-kiosk.ps1: an immediate Stop-Process -Force
+# can race Chromium's own write of recent session state (cookies, sign-ins)
+# to disk. This matters more now that the Home corner button calls this
+# script on every use, not just at logon - a forceful kill here was
+# confirmed 2026-08-24 to be losing a just-completed Google sign-in on the
+# very next relaunch. Force-kill remains the fallback for anything still
+# running after a couple seconds.
+$existing = Get-CimInstance Win32_Process -Filter "Name = 'msedge.exe'" |
+  Where-Object { $_.CommandLine -like "*--user-data-dir=$profileDir*" }
+foreach ($p in $existing) {
+  try {
+    $proc = Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue
+    if ($proc -and $proc.MainWindowHandle -ne 0) {
+      $proc.CloseMainWindow() | Out-Null
+    }
+  } catch {}
+}
+Start-Sleep -Seconds 2
 Get-CimInstance Win32_Process -Filter "Name = 'msedge.exe'" |
   Where-Object { $_.CommandLine -like "*--user-data-dir=$profileDir*" } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-Start-Sleep -Milliseconds 500
 
 Start-Process -FilePath $edge -ArgumentList @(
   "--kiosk", $url,
