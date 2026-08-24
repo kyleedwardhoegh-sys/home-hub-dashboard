@@ -18,6 +18,24 @@ const PEOPLE = {
 
 let lastCalendarEvents = [];
 
+// ---- Ambient widgets: on/off per household, stored on this kiosk device ----
+// This is a device-local preference (localStorage), not synced anywhere -
+// there's only one physical screen this applies to. The clock itself isn't
+// in this list; it's the one thing the ambient view always shows.
+const AMBIENT_WIDGETS = [
+  { id: "weather", label: "Weather", desc: "Current temperature and conditions for Maple Grove" },
+  { id: "calendar", label: "Today's Events", desc: "Pills showing today's calendar events" },
+];
+
+function isWidgetEnabled(id) {
+  const stored = localStorage.getItem(`widget:${id}`);
+  return stored === null ? true : stored === "on";
+}
+
+function setWidgetEnabled(id, enabled) {
+  localStorage.setItem(`widget:${id}`, enabled ? "on" : "off");
+}
+
 // WMO weather codes -> emoji + label
 // https://open-meteo.com/en/docs (weather_code field)
 const WEATHER_CODES = {
@@ -85,6 +103,10 @@ setInterval(updateClock, 10 * 1000);
 
 // ---- Weather ----
 async function updateWeather() {
+  if (!isWidgetEnabled("weather")) {
+    document.getElementById("weather").hidden = true;
+    return;
+  }
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
       `&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=auto`;
@@ -120,9 +142,12 @@ async function updateCalendar() {
     if (!res.ok) throw new Error(`Calendar API ${res.status}`);
     const data = await res.json();
     const events = data.events || [];
+    // Still fetched and kept even if the ambient pill widget is off - the
+    // Kyle/Logan person boards show today's events independently of this
+    // ambient-screen toggle.
     lastCalendarEvents = events;
 
-    if (events.length === 0) {
+    if (events.length === 0 || !isWidgetEnabled("calendar")) {
       calendarEl.hidden = true;
       return;
     }
@@ -145,14 +170,15 @@ async function updateCalendar() {
 updateCalendar();
 setInterval(updateCalendar, CALENDAR_REFRESH_MS);
 
-// ---- View switching: ambient <-> launcher <-> person ----
+// ---- View switching: ambient <-> launcher <-> person <-> settings ----
 const ambientView = document.getElementById("ambient");
 const launcherView = document.getElementById("launcher");
 const personView = document.getElementById("person");
+const settingsView = document.getElementById("settings");
 let idleTimer = null;
 
 function hideAllViews() {
-  for (const view of [ambientView, launcherView, personView]) {
+  for (const view of [ambientView, launcherView, personView, settingsView]) {
     view.classList.remove("active");
     view.hidden = true;
   }
@@ -183,6 +209,15 @@ function showPerson(id) {
   resetIdleTimer();
 }
 
+function showSettings() {
+  renderSettings();
+  hideAllViews();
+  currentPersonView = null;
+  settingsView.hidden = false;
+  settingsView.classList.add("active");
+  resetIdleTimer();
+}
+
 function resetIdleTimer() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(showAmbient, IDLE_TIMEOUT_MS);
@@ -191,6 +226,42 @@ function resetIdleTimer() {
 ambientView.addEventListener("pointerdown", showLauncher);
 launcherView.addEventListener("pointerdown", resetIdleTimer);
 personView.addEventListener("pointerdown", resetIdleTimer);
+settingsView.addEventListener("pointerdown", resetIdleTimer);
+
+document.getElementById("tile-settings").addEventListener("pointerdown", (e) => {
+  e.stopPropagation();
+  showSettings();
+});
+
+function renderSettings() {
+  const listEl = document.getElementById("settings-list");
+  listEl.innerHTML = AMBIENT_WIDGETS.map((w) => {
+    const on = isWidgetEnabled(w.id);
+    return `
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">${escapeHtml(w.label)}</div>
+          <div class="settings-row-desc">${escapeHtml(w.desc)}</div>
+        </div>
+        <button class="toggle-switch ${on ? "on" : ""}" type="button" data-widget="${w.id}"></button>
+      </div>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll(".toggle-switch").forEach((btn) => {
+    btn.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.widget;
+      const nowOn = !isWidgetEnabled(id);
+      setWidgetEnabled(id, nowOn);
+      btn.classList.toggle("on", nowOn);
+      // Reflect the change on the ambient screen immediately, not just on
+      // the next scheduled refresh.
+      updateWeather();
+      updateCalendar();
+    });
+  });
+}
 
 // ---- Avatars: tap in to a personalized board ----
 document.getElementById("avatar-row").addEventListener("pointerdown", (e) => {
