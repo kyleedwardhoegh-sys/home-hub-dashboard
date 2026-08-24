@@ -18,13 +18,18 @@ const PEOPLE = {
 
 let lastCalendarEvents = [];
 
-// ---- Ambient widgets: on/off per household, stored on this kiosk device ----
-// This is a device-local preference (localStorage), not synced anywhere -
-// there's only one physical screen this applies to. The clock itself isn't
-// in this list; it's the one thing the ambient view always shows.
-const AMBIENT_WIDGETS = [
-  { id: "weather", label: "Weather", desc: "Current temperature and conditions for Maple Grove" },
-  { id: "calendar", label: "Today's Events", desc: "Pills showing today's calendar events" },
+// ---- Launcher tiles: which ones show, on/off per household ----
+// This is what Logan actually meant by "widgets" - the options you see
+// after tapping in (the launcher grid), not the ambient clock screen's own
+// info (that stays as-is). Device-local preference (localStorage), not
+// synced anywhere - there's only one physical screen this applies to.
+// Settings itself is never in this list - it can't be hidden, or there'd
+// be no way back into this screen to turn it back on.
+const LAUNCHER_TILES = [
+  { id: "workouts", label: "Workouts", tileId: "tile-workouts" },
+  { id: "football", label: "Practice Planner", tileId: "tile-football" },
+  { id: "team", label: "Team Site", tileId: "tile-team" },
+  { id: "calendar", label: "Calendar", tileId: "tile-calendar" },
 ];
 
 function isWidgetEnabled(id) {
@@ -34,6 +39,12 @@ function isWidgetEnabled(id) {
 
 function setWidgetEnabled(id, enabled) {
   localStorage.setItem(`widget:${id}`, enabled ? "on" : "off");
+}
+
+function applyLauncherTileVisibility() {
+  for (const t of LAUNCHER_TILES) {
+    document.getElementById(t.tileId).hidden = !isWidgetEnabled(t.id);
+  }
 }
 
 // WMO weather codes -> emoji + label
@@ -103,10 +114,6 @@ setInterval(updateClock, 10 * 1000);
 
 // ---- Weather ----
 async function updateWeather() {
-  if (!isWidgetEnabled("weather")) {
-    document.getElementById("weather").hidden = true;
-    return;
-  }
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
       `&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=auto`;
@@ -142,12 +149,9 @@ async function updateCalendar() {
     if (!res.ok) throw new Error(`Calendar API ${res.status}`);
     const data = await res.json();
     const events = data.events || [];
-    // Still fetched and kept even if the ambient pill widget is off - the
-    // Kyle/Logan person boards show today's events independently of this
-    // ambient-screen toggle.
     lastCalendarEvents = events;
 
-    if (events.length === 0 || !isWidgetEnabled("calendar")) {
+    if (events.length === 0) {
       calendarEl.hidden = true;
       return;
     }
@@ -185,6 +189,7 @@ function hideAllViews() {
 }
 
 function showLauncher() {
+  applyLauncherTileVisibility();
   hideAllViews();
   currentPersonView = null;
   launcherView.classList.add("active");
@@ -235,15 +240,12 @@ document.getElementById("tile-settings").addEventListener("pointerdown", (e) => 
 
 function renderSettings() {
   const listEl = document.getElementById("settings-list");
-  listEl.innerHTML = AMBIENT_WIDGETS.map((w) => {
-    const on = isWidgetEnabled(w.id);
+  listEl.innerHTML = LAUNCHER_TILES.map((t) => {
+    const on = isWidgetEnabled(t.id);
     return `
       <div class="settings-row">
-        <div>
-          <div class="settings-row-label">${escapeHtml(w.label)}</div>
-          <div class="settings-row-desc">${escapeHtml(w.desc)}</div>
-        </div>
-        <button class="toggle-switch ${on ? "on" : ""}" type="button" data-widget="${w.id}"></button>
+        <div class="settings-row-label">${escapeHtml(t.label)}</div>
+        <button class="toggle-switch ${on ? "on" : ""}" type="button" data-widget="${t.id}"></button>
       </div>
     `;
   }).join("");
@@ -255,10 +257,6 @@ function renderSettings() {
       const nowOn = !isWidgetEnabled(id);
       setWidgetEnabled(id, nowOn);
       btn.classList.toggle("on", nowOn);
-      // Reflect the change on the ambient screen immediately, not just on
-      // the next scheduled refresh.
-      updateWeather();
-      updateCalendar();
     });
   });
 }

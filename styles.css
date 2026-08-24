@@ -229,7 +229,9 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   padding: max(32px, env(safe-area-inset-top)) 24px 40px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .launcher-header { text-align: center; margin: 4vh 0 5vh; }
@@ -283,7 +285,9 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   padding: max(32px, env(safe-area-inset-top)) 24px 40px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .settings-list {
@@ -304,7 +308,6 @@ html, body {
   box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 .settings-row-label { font-size: 20px; font-weight: 700; flex: 1; }
-.settings-row-desc { font-size: 14px; color: var(--muted); margin-top: 2px; }
 
 .toggle-switch {
   width: 64px;
@@ -338,7 +341,9 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   padding: max(32px, env(safe-area-inset-top)) 24px 40px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .person-header {
