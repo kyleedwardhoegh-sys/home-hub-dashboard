@@ -276,6 +276,18 @@ Acuity Scheduling booking confirmations) produce long auto-generated
 titles like "Nash MBT Maple Grove Training Sessions (Maple Grove
 Facility)" that would blow past "glanceable from across the kitchen."
 
+## Kid boards + celebrations (Training Hub, 2026-10-13)
+
+Tapping NA / NE opens that kid's board, fed by the HomeHub-Web **v2 Training Hub** API
+(`getHub`, same Apps Script `/exec` URL as before; the v1 `getAssignments` flow is
+retired). Polled every minute for both kids: achievements today, the weekly prize
+progress bar, each track's remaining must-do sets, and an "Open <name>'s Training"
+button linking to `https://home-hub-web-hoegh-home.vercel.app/?p=<Name>`. The
+celebration overlay fires when a kid finishes every must-do set on a track, or when
+their weekly total reaches the prize target (BOOM). The first poll after load only sets
+a baseline, so nothing already done celebrates again. Design of the hub itself lives in
+HomeHub-Web's HANDOFF.md ("v2: Training Hub").
+
 ## Not yet built / open questions
 
 - Calendar tile is still a placeholder ("Coming Soon") — a fuller agenda

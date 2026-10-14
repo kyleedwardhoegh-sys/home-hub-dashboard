@@ -278,20 +278,33 @@ function renderPersonView(id) {
   personView.style.setProperty("--accent-dark", `var(--${id}-dark)`);
 
   if (person.kind === "kid") {
-    const assignments = (workoutsByKid[person.apiKid] || []);
-    if (assignments.length === 0) {
-      contentEl.innerHTML = `<div class="person-empty">No workout assigned today. Enjoy the rest!</div>`;
+    const s = trainingByKid[person.apiKid];
+    const openLink = `<a class="training-open" href="${TRAINING_URL}?p=${encodeURIComponent(person.apiKid)}">Open ${escapeHtml(person.name)}'s Training →</a>`;
+    if (!s) {
+      contentEl.innerHTML = `<div class="person-empty">Loading training…</div>${openLink}`;
       return;
     }
-    contentEl.innerHTML = assignments.map((a) => `
-      <div class="workout-card ${a.done ? "done" : ""}">
-        <span class="workout-status">${a.done ? "✓" : ""}</span>
-        <div>
-          <div class="workout-name">${escapeHtml(a.exercise)}</div>
-          <div class="workout-meta">${escapeHtml(String(a.sets))} × ${escapeHtml(String(a.reps))}</div>
-        </div>
-      </div>
-    `).join("");
+    const pct = (a, b) => Math.max(0, Math.min(100, b ? (a / b) * 100 : 0));
+    const weekly = s.weekly
+      ? `<div class="training-week">
+          <div class="training-week-top"><span>This week: ${escapeHtml(s.weekly.prize)}</span>
+            <b>${s.week >= s.weekly.target ? "BOOM!" : `${s.week}/${s.weekly.target}`}</b></div>
+          <div class="training-bar"><i style="width:${pct(s.week, s.weekly.target)}%"></i></div>
+        </div>`
+      : "";
+    contentEl.innerHTML = `
+      <div class="training-today"><b>${s.today}</b> achievement${s.today === 1 ? "" : "s"} today</div>
+      ${weekly}
+      ${s.tracks.map((t) => `
+        <div class="workout-card ${t.total && t.done >= t.total ? "done" : ""}">
+          <span class="workout-status">${t.total && t.done >= t.total ? "✓" : ""}</span>
+          <div class="training-track">
+            <div class="workout-name">${escapeHtml(t.name)}</div>
+            <div class="workout-meta">${t.total ? (t.done >= t.total ? "Must-dos done!" : `${t.total - t.done} must-do sets to go`) : "Pick anything"} · ${t.pts} achievement${t.pts === 1 ? "" : "s"}</div>
+            <div class="training-bar small"><i style="width:${pct(t.done, t.total)}%"></i></div>
+          </div>
+        </div>`).join("")}
+      ${openLink}`;
   } else {
     if (lastCalendarEvents.length === 0) {
       contentEl.innerHTML = `<div class="person-empty">Nothing on the calendar today.</div>`;
@@ -307,48 +320,67 @@ function renderPersonView(id) {
   }
 }
 
-// ---- Workouts: today's assignments + completion celebration ----
-let workoutsByKid = {}; // apiKid -> assignment[]
-let seenDoneKeys = null; // null until first poll establishes a baseline
+// ---- Training Hub (HomeHub-Web v2): today's progress + celebrations ----
+// Reads the same Apps Script API as the Training Hub (`getHub`). Celebrates when a
+// kid finishes every must-do set on a track, or when their weekly prize goes BOOM.
+const TRAINING_URL = "https://home-hub-web-hoegh-home.vercel.app/";
+let trainingByKid = {}; // apiKid -> summary
+let seenWins = null; // null until the first poll establishes a baseline
 let currentPersonView = null; // which person board is open, if any, so it can live-update
 
-function assignmentKey(a) {
-  return `${a.date}|${a.kid}|${a.exercise}`;
+function localDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function summarizeHub(hub) {
+  const tracks = (hub.player.tracks || []).map((name) => {
+    const t = hub.tracks[name] || { must: [], options: [] };
+    const all = t.must.concat(...t.options.map((g) => g.items));
+    const setsDone = (it) => { let n = 0; for (let s = 1; s <= it.sets; s++) if (hub.done[`${name}|${it.id}|${s}`]) n++; return n; };
+    return {
+      name,
+      total: t.must.reduce((a, it) => a + it.sets, 0),
+      done: t.must.reduce((a, it) => a + setsDone(it), 0),
+      pts: all.reduce((a, it) => a + setsDone(it) * it.pts, 0),
+    };
+  });
+  return { date: hub.date, today: hub.points.today, week: hub.points.week, weekly: hub.prizes.weekly, tracks };
 }
 
 async function pollWorkouts() {
-  try {
-    const res = await fetch(`${WORKOUT_API_BASE}?action=getAssignments&_t=${Date.now()}`, { cache: "no-store" });
-    const data = await res.json();
-    const assignments = Array.isArray(data) ? data : (data.assignments || []);
-
-    const byKid = {};
-    for (const a of assignments) {
-      (byKid[a.kid] = byKid[a.kid] || []).push(a);
-    }
-    workoutsByKid = byKid;
-
-    const doneNow = new Set(assignments.filter((a) => a.done).map(assignmentKey));
-
-    if (seenDoneKeys === null) {
-      // First poll after load: just establish the baseline, don't celebrate
-      // for things that were already done before the kiosk was looking.
-      seenDoneKeys = doneNow;
-    } else {
-      for (const a of assignments) {
-        if (a.done && !seenDoneKeys.has(assignmentKey(a))) {
-          triggerCelebration(a);
-        }
+  const kids = Object.values(PEOPLE).filter((p) => p.kind === "kid");
+  const wins = new Map(); // key -> {person, title, sub}
+  for (const person of kids) {
+    try {
+      const url = `${WORKOUT_API_BASE}?action=getHub&player=${encodeURIComponent(person.apiKid)}&date=${localDate()}&_t=${Date.now()}`;
+      const hub = await (await fetch(url, { cache: "no-store" })).json();
+      if (hub.error) throw new Error(hub.error);
+      const s = summarizeHub(hub);
+      trainingByKid[person.apiKid] = s;
+      for (const t of s.tracks) {
+        if (t.total && t.done >= t.total) wins.set(`${s.date}|${person.apiKid}|${t.name}`, { person, title: `${person.name} finished ${t.name}!`, sub: "Every must-do set done" });
       }
-      seenDoneKeys = doneNow;
+      if (s.weekly && s.week >= s.weekly.target) {
+        wins.set(`week|${person.apiKid}|${s.weekly.prize}|${s.weekly.target}`, { person, title: `${person.name} hit BOOM!`, sub: s.weekly.prize });
+      }
+    } catch (err) {
+      console.warn(`Training poll failed for ${person.name}:`, err);
     }
+  }
 
-    // If a kid's board happens to be open right now, refresh it live.
-    if (currentPersonView && PEOPLE[currentPersonView].kind === "kid") {
-      renderPersonView(currentPersonView);
-    }
-  } catch (err) {
-    console.warn("Workout poll failed:", err);
+  if (seenWins === null) {
+    // First poll after load: just establish the baseline, don't celebrate
+    // for things that were already done before the kiosk was looking.
+    seenWins = new Set(wins.keys());
+  } else {
+    for (const [k, w] of wins) if (!seenWins.has(k)) triggerCelebration(w);
+    for (const k of wins.keys()) seenWins.add(k);
+  }
+
+  // If a kid's board happens to be open right now, refresh it live.
+  if (currentPersonView && PEOPLE[currentPersonView].kind === "kid") {
+    renderPersonView(currentPersonView);
   }
 }
 pollWorkouts();
@@ -356,14 +388,11 @@ setInterval(pollWorkouts, WORKOUT_POLL_MS);
 
 const CELEBRATION_EMOJI = ["🔥", "🎉", "💪", "⭐"];
 
-function triggerCelebration(assignment) {
-  const person = Object.values(PEOPLE).find((p) => p.apiKid === assignment.kid);
-  if (!person) return;
-
+function triggerCelebration(win) {
   document.getElementById("celebration-emoji").textContent =
     CELEBRATION_EMOJI[Math.floor(Math.random() * CELEBRATION_EMOJI.length)];
-  document.getElementById("celebration-title").textContent = `${person.name} finished a workout!`;
-  document.getElementById("celebration-sub").textContent = assignment.exercise;
+  document.getElementById("celebration-title").textContent = win.title;
+  document.getElementById("celebration-sub").textContent = win.sub;
 
   const celebrationEl = document.getElementById("celebration");
   celebrationEl.hidden = false;
