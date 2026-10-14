@@ -295,15 +295,18 @@ function renderPersonView(id) {
     contentEl.innerHTML = `
       <div class="training-today"><b>${s.today}</b> achievement${s.today === 1 ? "" : "s"} today</div>
       ${weekly}
+      <div class="training-pick">Tap a time of day to start:</div>
       ${s.tracks.map((t) => `
-        <div class="workout-card ${t.total && t.done >= t.total ? "done" : ""}">
+        <a class="workout-card track-link ${t.total && t.done >= t.total ? "done" : ""}"
+           href="${TRAINING_URL}?p=${encodeURIComponent(person.apiKid)}&track=${encodeURIComponent(t.name.toLowerCase().replace(/\s+/g, ""))}&kiosk=1">
           <span class="workout-status">${t.total && t.done >= t.total ? "✓" : ""}</span>
           <div class="training-track">
             <div class="workout-name">${escapeHtml(t.name)}</div>
             <div class="workout-meta">${t.total ? (t.done >= t.total ? "Must-dos done!" : `${t.total - t.done} must-do sets to go`) : "Pick anything"} · ${t.pts} achievement${t.pts === 1 ? "" : "s"}</div>
             <div class="training-bar small"><i style="width:${pct(t.done, t.total)}%"></i></div>
           </div>
-        </div>`).join("")}
+          <span class="track-go">›</span>
+        </a>`).join("")}
       ${openLink}`;
   } else {
     if (lastCalendarEvents.length === 0) {
@@ -398,3 +401,21 @@ function triggerCelebration(win) {
   celebrationEl.hidden = false;
   setTimeout(() => { celebrationEl.hidden = true; }, 4000);
 }
+
+// ---- Pick up new versions by itself ----
+// The kiosk never reloads on its own, so changes to this dashboard used to need a kiosk
+// restart. Every 5 minutes, check whether app.js changed on the server; if it did and
+// nobody has touched the screen for 2 minutes, reload.
+let codeTag = null;
+let lastTouch = Date.now();
+document.addEventListener("pointerdown", () => { lastTouch = Date.now(); }, true);
+async function checkForUpdate() {
+  try {
+    const r = await fetch(`app.js?_t=${Date.now()}`, { method: "HEAD", cache: "no-store" });
+    const tag = r.headers.get("etag") || r.headers.get("last-modified");
+    if (!tag) return;
+    if (codeTag === null) { codeTag = tag; return; }
+    if (tag !== codeTag && Date.now() - lastTouch > 120000) location.reload();
+  } catch (e) { /* offline: try again next time */ }
+}
+if (location.protocol.startsWith("http")) { checkForUpdate(); setInterval(checkForUpdate, 5 * 60000); }

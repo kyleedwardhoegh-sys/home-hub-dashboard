@@ -323,6 +323,12 @@ their weekly total reaches the prize target (BOOM). The first poll after load on
 a baseline, so nothing already done celebrates again. Design of the hub itself lives in
 HomeHub-Web's HANDOFF.md ("v2: Training Hub").
 
+**2026-10-14:** on each kid's board the Morning / After School / Night rows are big links
+that open the Training Hub straight on that track (`?p=<Name>&track=morning|afterschool|night&kiosk=1`).
+The dashboard also now reloads itself when a new version is deployed (HEAD-checks
+`app.js`'s ETag every 5 minutes, reloads after 2 minutes without a touch), so dashboard
+changes no longer need a kiosk restart.
+
 ## Not yet built / open questions
 
 - **Requested 2026-10-13, not built yet: screen black from 11:00 PM until the 5:00 AM

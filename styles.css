@@ -413,6 +413,12 @@ html, body {
   color: #fff;
 }
 .workout-name { font-size: 20px; font-weight: 700; }
+/* Each time-of-day row on a kid's board opens that track in the Training Hub. */
+a.track-link { color: inherit; text-decoration: none; min-height: 96px; }
+a.track-link:active { transform: scale(0.98); }
+.track-link .workout-name { font-size: 26px; }
+.track-go { font-size: 44px; line-height: 1; color: var(--accent-dark); margin-left: auto; padding-left: 8px; }
+.training-pick { font-size: 17px; font-weight: 700; color: var(--muted); margin-top: 6px; }
 .training-track { flex: 1; min-width: 0; }
 .training-today { font-size: 22px; font-weight: 700; }
 .training-today b { font-size: 34px; color: var(--accent-dark); }
