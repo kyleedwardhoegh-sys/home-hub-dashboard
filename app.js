@@ -324,7 +324,9 @@ function renderPersonView(id) {
 }
 
 // ---- Training Hub (HomeHub-Web v2): today's progress + celebrations ----
-// Reads the same Apps Script API as the Training Hub (`getHub`). Celebrates when a
+// Reads kid data the same way as the Training Hub: through its hubdata.js (the fast
+// database, falling back to the Sheet's Apps Script), or straight from Apps Script
+// if hubdata.js didn't load. Celebrates when a
 // kid finishes every must-do set on a track, or when their weekly prize goes BOOM.
 const TRAINING_URL = "https://home-hub-web-hoegh-home.vercel.app/";
 let trainingByKid = {}; // apiKid -> summary
@@ -357,8 +359,12 @@ async function pollWorkouts() {
   // Both kids at once: each Apps Script call takes 2-5 s, so one after the other doubled the wait.
   await Promise.all(kids.map(async (person) => {
     try {
-      const url = `${WORKOUT_API_BASE}?action=getHub&player=${encodeURIComponent(person.apiKid)}&date=${localDate()}&_t=${Date.now()}`;
-      const hub = await (await fetch(url, { cache: "no-store" })).json();
+      let hub;
+      if (window.HubData) hub = await HubData.getHub(person.apiKid, localDate());
+      else {
+        const url = `${WORKOUT_API_BASE}?action=getHub&player=${encodeURIComponent(person.apiKid)}&date=${localDate()}&_t=${Date.now()}`;
+        hub = await (await fetch(url, { cache: "no-store" })).json();
+      }
       if (hub.error) throw new Error(hub.error);
       const s = summarizeHub(hub);
       trainingByKid[person.apiKid] = s;
@@ -405,18 +411,25 @@ function triggerCelebration(win) {
 
 // ---- Pick up new versions by itself ----
 // The kiosk never reloads on its own, so changes to this dashboard used to need a kiosk
-// restart. Every 5 minutes, check whether app.js changed on the server; if it did and
-// nobody has touched the screen for 2 minutes, reload.
+// restart. Every 5 minutes, check whether app.js (or the Training Hub's hubdata.js) changed
+// on the server; if it did and nobody has touched the screen for 2 minutes, reload.
 let codeTag = null;
 let lastTouch = Date.now();
 document.addEventListener("pointerdown", () => { lastTouch = Date.now(); }, true);
 async function checkForUpdate() {
   try {
-    const r = await fetch(`app.js?_t=${Date.now()}`, { method: "HEAD", cache: "no-store" });
-    const tag = r.headers.get("etag") || r.headers.get("last-modified");
-    if (!tag) return;
-    if (codeTag === null) { codeTag = tag; return; }
-    if (tag !== codeTag && Date.now() - lastTouch > 120000) location.reload();
+    const files = ["app.js", `${TRAINING_URL}hubdata.js`];
+    const tags = await Promise.all(files.map(async (f) => {
+      try {
+        const r = await fetch(`${f}?_t=${Date.now()}`, { method: "HEAD", cache: "no-store" });
+        return r.headers.get("etag") || r.headers.get("last-modified") || "";
+      } catch (e) { return ""; }
+    }));
+    if (!tags[0]) return;
+    if (codeTag === null) { codeTag = tags; return; }
+    if (!codeTag[1] && tags[1]) codeTag[1] = tags[1]; // hubdata.js check is best-effort
+    const changed = tags[0] !== codeTag[0] || (tags[1] && tags[1] !== codeTag[1]);
+    if (changed && Date.now() - lastTouch > 120000) location.reload();
   } catch (e) { /* offline: try again next time */ }
 }
 if (location.protocol.startsWith("http")) { checkForUpdate(); setInterval(checkForUpdate, 5 * 60000); }
