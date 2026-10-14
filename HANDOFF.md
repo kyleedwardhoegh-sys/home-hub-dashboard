@@ -288,6 +288,20 @@ before. Kyle asked for always-visible back / home / exit on every page; the unla
 Links from this dashboard into the Training Hub add `?kiosk=1` so the hub hides its own
 nav bar and keeps clear of these pills.
 
+## 5:00 AM: Nellie's Morning track (2026-10-13)
+
+Scheduled task **HomeHubNellieMorning** (created by `register-nellie-morning.ps1`)
+runs `kiosk-nav-helper/cdp-nav.ps1 -Action open -Url "<hub>/?p=Nellie&track=morning&kiosk=1"`
+daily at 5:00 AM. It navigates the running kiosk tab over the DevTools port; if the
+kiosk isn't running it launches `start-kiosk.ps1` first and waits up to ~30 s for the
+port. WakeToRun on; StartWhenAvailable off, so a missed 5 AM never fires later in the
+day. The kiosk's Back / Home pills still work from there (Back returns to whatever was
+showing before). Also fixed in `cdp-nav.ps1` at the same time: Windows PowerShell 5.1
+treats Invoke-RestMethod's JSON array as one pipeline object, so `Where-Object type -eq
+page` could match the whole list when Edge exposes several targets. It now unrolls the
+array first. A navigation that drops the socket after sending now counts as success
+(exit 0).
+
 ## Kid boards + celebrations (Training Hub, 2026-10-13)
 
 Tapping NA / NE opens that kid's board, fed by the HomeHub-Web **v2 Training Hub** API
