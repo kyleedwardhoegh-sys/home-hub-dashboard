@@ -288,6 +288,15 @@ before. Kyle asked for always-visible back / home / exit on every page; the unla
 Links from this dashboard into the Training Hub add `?kiosk=1` so the hub hides its own
 nav bar and keeps clear of these pills.
 
+**Fixed 2026-10-14:** the pills used to be drawn all the time, so they floated over VS Code
+and the desktop when the kiosk wasn't running (Back sat on top of other apps' close
+buttons), while inside the kiosk the full-screen Edge window could cover them. The helper
+now checks every 500 ms whether the active window belongs to the kiosk's Edge (its command
+line contains `HomeHubKioskProfile`, so Kyle's regular Edge never counts). If so, it shows
+the pills and re-asserts them as topmost with `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE)`;
+otherwise it hides them. Verified both ways with screen captures (Chrome in front: no pills;
+kiosk in front: all three).
+
 ## 5:00 AM: Nellie's Morning track (2026-10-13)
 
 Scheduled task **HomeHubNellieMorning** (created by `register-nellie-morning.ps1`)

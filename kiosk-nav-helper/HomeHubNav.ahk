@@ -73,8 +73,62 @@ for btn in BUTTONS {
     btnGui.Show(Format("w{1} h{2} x{3} y{4} NoActivate", BTN_W, BTN_H, btn.x, btn.y))
     WinSetRegion(Format("0-0 W{1} H{2} R{2}-{2}", BTN_W, BTN_H), btnGui)
     WinSetTransparent(225, btnGui)
+    btnGui.Hide()  ; Tick() shows them only while the kiosk is in front
+    btn.gui := btnGui
     btn.hwnd := btnGui.Hwnd
 }
+
+; ---- Show the pills ONLY while the kiosk is the window in front (fixed 2026-10-14) ----
+; Before this, the pills were drawn all the time: over VS Code and the desktop when
+; the kiosk wasn't running (Back sat on top of other apps' close buttons), and the
+; full-screen kiosk window could still cover them. Now every 500 ms: if the active
+; window belongs to the kiosk's own Edge (its command line uses the kiosk profile,
+; so Kyle's regular Edge never counts), show the pills and push them back to the top
+; of the z-order without taking focus; otherwise hide them.
+KIOSK_PROFILE := "HomeHubKioskProfile"
+kioskPids := Map()  ; pid -> is it the kiosk's Edge? (cached; WMI lookups are slow)
+
+IsKioskPid(pid) {
+    global kioskPids, KIOSK_PROFILE
+    if kioskPids.Has(pid)
+        return kioskPids[pid]
+    isKiosk := false
+    try {
+        for proc in ComObjGet("winmgmts:").ExecQuery("SELECT CommandLine FROM Win32_Process WHERE ProcessId=" pid)
+            isKiosk := InStr(proc.CommandLine, KIOSK_PROFILE) > 0
+    }
+    kioskPids[pid] := isKiosk
+    return isKiosk
+}
+
+KioskInFront() {
+    try {
+        hwnd := WinExist("A")
+        if !hwnd || WinGetProcessName(hwnd) != "msedge.exe"
+            return false
+        return IsKioskPid(WinGetPID(hwnd))
+    } catch {
+        return false
+    }
+}
+
+Tick() {
+    global BUTTONS
+    show := KioskInFront()
+    for btn in BUTTONS {
+        visible := DllCall("IsWindowVisible", "ptr", btn.hwnd)
+        if show {
+            if !visible
+                btn.gui.Show("NoActivate")
+            ; HWND_TOPMOST (-1), SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE (0x13): back on top, no focus steal
+            DllCall("SetWindowPos", "ptr", btn.hwnd, "ptr", -1, "int", 0, "int", 0, "int", 0, "int", 0, "uint", 0x13)
+        } else if visible {
+            btn.gui.Hide()
+        }
+    }
+}
+SetTimer(Tick, 500)
+SetTimer(() => kioskPids.Clear(), 300000)  ; forget cached pids now and then (pids get reused)
 
 activeButton := ""
 
