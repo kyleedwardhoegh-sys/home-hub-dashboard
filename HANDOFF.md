@@ -345,3 +345,5 @@ changes no longer need a kiosk restart.
   auto-launch" above) but not yet confirmed with a real physical touch/
   click** — only verified so far that the extension loads and is enabled.
   Needs a real test on the actual touchscreen.
+
+**Taskbar shortcut icon (2026-10-14):** the pinned "Launch Home Hub Kiosk" shortcut showed a blank page because its icon pointed at `%ProgramFiles%\Microsoft\Edge\...` (Edge lives in `Program Files (x86)` on this PC). It now uses `kiosk-icon.ico` in this repo: a white house with a gold door on the dashboard's navy rounded square. If the repo moves, re-point the shortcut's icon (`%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Launch Home Hub Kiosk.lnk`).
