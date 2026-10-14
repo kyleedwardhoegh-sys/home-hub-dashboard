@@ -316,6 +316,13 @@ HomeHub-Web's HANDOFF.md ("v2: Training Hub").
 
 ## Not yet built / open questions
 
+- **Requested 2026-10-13, not built yet: screen black from 11:00 PM until the 5:00 AM
+  Nellie trigger** (avoid light in the kitchen at night). Design notes: screen
+  sleep was deliberately disabled via `powercfg` (see above), so this needs its own
+  schedule, e.g. an 11 PM task that turns the display off (or shows a pure-black page /
+  overlay) and makes the existing 5 AM `HomeHubNellieMorning` task wake it. Check that
+  a monitor-off state wakes reliably on the Elo touchscreen, and that touch still wakes
+  it if someone needs the screen overnight. The 5 AM task already has WakeToRun.
 - Calendar tile is still a placeholder ("Coming Soon") — a fuller agenda
   view behind it hasn't been built (not requested; inline-only was the
   chosen approach as of 2026-08-22).
