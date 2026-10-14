@@ -276,6 +276,18 @@ Acuity Scheduling booking confirmations) produce long auto-generated
 titles like "Nash MBT Maple Grove Training Sessions (Maple Grove
 Facility)" that would blow past "glanceable from across the kitchen."
 
+## Corner pills are labeled (2026-10-13)
+
+`kiosk-nav-helper/HomeHubNav.ahk`'s three corner buttons are now labeled pills,
+**← Back** (top-right), **⌂ Home** (bottom-left) and **✕ Exit** (bottom-right), 156×60
+real pixels with `-DPIScale` (this PC runs at 150% display scaling; without it the
+window grows but the rounded region doesn't, which clipped the labels). Same jobs as
+before. Kyle asked for always-visible back / home / exit on every page; the unlabeled
+44px dots were too easy to miss. After editing the .ahk, restart it with
+`schtasks /end /tn HomeHubNavHelper` then `schtasks /run /tn HomeHubNavHelper`.
+Links from this dashboard into the Training Hub add `?kiosk=1` so the hub hides its own
+nav bar and keeps clear of these pills.
+
 ## Kid boards + celebrations (Training Hub, 2026-10-13)
 
 Tapping NA / NE opens that kid's board, fed by the HomeHub-Web **v2 Training Hub** API

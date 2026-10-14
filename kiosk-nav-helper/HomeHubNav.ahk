@@ -46,23 +46,33 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-BTN_SIZE := 44
+; Labeled pills (changed 2026-10-13 at Kyle's request: "always have back / home /
+; exit buttons on every page"). The original 44px unlabeled gray dots were too easy
+; to miss. Glyphs are built with Chr() so this file stays plain ASCII.
+BTN_W := 156
+BTN_H := 60
 MARGIN := 8
 repoRoot := A_ScriptDir "\.."
 psPrefix := 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "'
 cdpScript := A_ScriptDir "\cdp-nav.ps1"
 
 BUTTONS := [
-    { id: "back", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: MARGIN,                             cmd: psPrefix cdpScript '" -Action back' },
-    { id: "home", x: MARGIN,                            y: A_ScreenHeight - BTN_SIZE - MARGIN, cmd: psPrefix cdpScript '" -Action home' },
-    { id: "exit", x: A_ScreenWidth - BTN_SIZE - MARGIN, y: A_ScreenHeight - BTN_SIZE - MARGIN,  cmd: psPrefix repoRoot '\exit-kiosk.ps1"' }
+    { id: "back", label: Chr(0x2190) " Back", x: A_ScreenWidth - BTN_W - MARGIN, y: MARGIN,                          cmd: psPrefix cdpScript '" -Action back' },
+    { id: "home", label: Chr(0x2302) " Home", x: MARGIN,                         y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action home' },
+    { id: "exit", label: Chr(0x2715) " Exit", x: A_ScreenWidth - BTN_W - MARGIN, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix repoRoot '\exit-kiosk.ps1"' }
 ]
 
 for btn in BUTTONS {
-    btnGui := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000")
-    btnGui.BackColor := "404040"
-    btnGui.Show(Format("w{1} h{1} x{2} y{3} NoActivate", BTN_SIZE, btn.x, btn.y))
-    WinSetRegion(Format("0-0 W{1} H{1} R{1}-{1}", BTN_SIZE), btnGui)
+    btnGui := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000 -DPIScale")  ; sizes below are real pixels (the PC runs at 150% scaling)
+    btnGui.BackColor := "222222"
+    btnGui.MarginX := 0, btnGui.MarginY := 0
+    btnGui.SetFont("s13 bold cFFFFFF", "Segoe UI Symbol")
+    ; 0x200 = SS_CENTERIMAGE (vertically centered). A static control passes clicks
+    ; through to its parent window, so the hwnd match below still works.
+    btnGui.Add("Text", Format("x0 y0 w{1} h{2} Center +0x200 BackgroundTrans", BTN_W, BTN_H), btn.label)
+    btnGui.Show(Format("w{1} h{2} x{3} y{4} NoActivate", BTN_W, BTN_H, btn.x, btn.y))
+    WinSetRegion(Format("0-0 W{1} H{2} R{2}-{2}", BTN_W, BTN_H), btnGui)
+    WinSetTransparent(225, btnGui)
     btn.hwnd := btnGui.Hwnd
 }
 

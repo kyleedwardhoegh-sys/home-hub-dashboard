@@ -279,7 +279,7 @@ function renderPersonView(id) {
 
   if (person.kind === "kid") {
     const s = trainingByKid[person.apiKid];
-    const openLink = `<a class="training-open" href="${TRAINING_URL}?p=${encodeURIComponent(person.apiKid)}">Open ${escapeHtml(person.name)}'s Training →</a>`;
+    const openLink = `<a class="training-open" href="${TRAINING_URL}?p=${encodeURIComponent(person.apiKid)}&kiosk=1">Open ${escapeHtml(person.name)}'s Training →</a>`;
     if (!s) {
       contentEl.innerHTML = `<div class="person-empty">Loading training…</div>${openLink}`;
       return;
