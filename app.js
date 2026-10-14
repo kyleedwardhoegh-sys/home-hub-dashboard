@@ -354,7 +354,8 @@ function summarizeHub(hub) {
 async function pollWorkouts() {
   const kids = Object.values(PEOPLE).filter((p) => p.kind === "kid");
   const wins = new Map(); // key -> {person, title, sub}
-  for (const person of kids) {
+  // Both kids at once: each Apps Script call takes 2-5 s, so one after the other doubled the wait.
+  await Promise.all(kids.map(async (person) => {
     try {
       const url = `${WORKOUT_API_BASE}?action=getHub&player=${encodeURIComponent(person.apiKid)}&date=${localDate()}&_t=${Date.now()}`;
       const hub = await (await fetch(url, { cache: "no-store" })).json();
@@ -370,7 +371,7 @@ async function pollWorkouts() {
     } catch (err) {
       console.warn(`Training poll failed for ${person.name}:`, err);
     }
-  }
+  }));
 
   if (seenWins === null) {
     // First poll after load: just establish the baseline, don't celebrate
