@@ -274,6 +274,8 @@ html, body {
 .tile-name { font-size: 28px; font-weight: 700; }
 
 .tile-workouts { background: linear-gradient(150deg, var(--workouts), var(--workouts-dark)); }
+.tile-nellie { background: linear-gradient(150deg, #F23D66, #5B2E7A); }
+.tile-nash { background: linear-gradient(150deg, #1D63D8, #0F2436); }
 .tile-football { background: linear-gradient(150deg, var(--football), var(--football-dark)); }
 .tile-team { background: linear-gradient(150deg, var(--team), var(--team-dark)); }
 .tile-calendar { background: linear-gradient(150deg, var(--calendar), var(--calendar-dark)); }
