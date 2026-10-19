@@ -63,14 +63,17 @@ cdpScript := A_ScriptDir "\cdp-nav.ps1"
 ; (Morning before 11, After School before 6 PM, then Night). Same neutral color as
 ; the other pills on purpose: pink/blue on screen means "you're on that kid's page".
 TRAINING := "https://home-hub-web-hoegh-home.vercel.app/"
+CAL_WEEK := "https://calendar.google.com/calendar/u/0/r/week"
 KID_GAP := 12
 
 BUTTONS := [
     { id: "back", label: Chr(0x2190) " Back", x: A_ScreenWidth - BTN_W - MARGIN, y: MARGIN,                          cmd: psPrefix cdpScript '" -Action back' },
     { id: "home", label: Chr(0x2302) " Home", x: MARGIN,                         y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action home' },
     { id: "exit", label: Chr(0x2715) " Exit", x: A_ScreenWidth - BTN_W - MARGIN, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix repoRoot '\exit-kiosk.ps1"' },
-    { id: "nellie", label: Chr(0x25B6) " Nellie", x: A_ScreenWidth // 2 - BTN_W - KID_GAP // 2, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' TRAINING '?p=Nellie&kiosk=1"' },
-    { id: "nash",   label: Chr(0x25B6) " Nash",   x: A_ScreenWidth // 2 + KID_GAP // 2,         y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' TRAINING '?p=Nash&kiosk=1"' }
+    { id: "nellie", label: Chr(0x25B6) " Nellie", x: A_ScreenWidth // 2 - BTN_W - BTN_W // 2 - KID_GAP, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' TRAINING '?p=Nellie&kiosk=1"' },
+    { id: "nash",   label: Chr(0x25B6) " Nash",   x: A_ScreenWidth // 2 - BTN_W // 2,                    y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' TRAINING '?p=Nash&kiosk=1"' },
+    ; CALENDAR (added 2026-10-19): Google Calendar's week view, full screen in the kiosk.
+    { id: "cal",    label: Chr(0x25A6) " Calendar", x: A_ScreenWidth // 2 + BTN_W // 2 + KID_GAP,      y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' CAL_WEEK '"' }
 ]
 
 for btn in BUTTONS {

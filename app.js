@@ -4,7 +4,7 @@ const LON = -93.4557; // Maple Grove, MN
 const WEATHER_REFRESH_MS = 15 * 60 * 1000; // 15 min
 const IDLE_TIMEOUT_MS = 25 * 1000; // return to ambient after 25s of no touch
 
-const CALENDAR_REFRESH_MS = 15 * 60 * 1000; // 15 min
+const CALENDAR_REFRESH_MS = 5 * 60 * 1000; // 5 min (the database copy refreshes every 5)
 
 const WORKOUT_API_BASE = "https://script.google.com/macros/s/AKfycbyyOY00079KTcqhRtuoE_W_OhRTZGlsHgfSTgryrTl3ZzsVFHwiA54bJ55hu7qChYyxGQ/exec";
 const WORKOUT_POLL_MS = 60 * 1000; // 1 min - frequent enough that the celebration feels close to real-time
@@ -142,13 +142,31 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Events come from the Training Hub's database first: the Sheet script publishes today's
+// events from EVERY family calendar there (Kyle's, Logan's, family, Crossbar, and the
+// kids' team calendars like 7G1), refreshed every 5 minutes. /api/calendar only reads
+// Kyle's own calendar, so it's the backup if that isn't available.
+async function loadTodayEvents() {
+  if (window.HubData && HubData.getEvents) {
+    try {
+      const ev = await HubData.getEvents(localDate());
+      if (ev) return ev.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "" }));
+    } catch (e) { /* fall back below */ }
+  }
+  const res = await fetch("/api/calendar", { cache: "no-store" });
+  if (!res.ok) throw new Error(`Calendar API ${res.status}`);
+  const data = await res.json();
+  return (data.events || []).map((ev) => ({
+    summary: ev.summary,
+    timeText: ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "All day",
+    location: "",
+  }));
+}
+
 async function updateCalendar() {
   const calendarEl = document.getElementById("calendar-events");
   try {
-    const res = await fetch("/api/calendar", { cache: "no-store" });
-    if (!res.ok) throw new Error(`Calendar API ${res.status}`);
-    const data = await res.json();
-    const events = data.events || [];
+    const events = await loadTodayEvents();
     lastCalendarEvents = events;
 
     if (events.length === 0) {
@@ -158,10 +176,7 @@ async function updateCalendar() {
 
     calendarEl.innerHTML = events.map((ev) => {
       const name = escapeHtml(ev.summary || "(untitled)");
-      const time = ev.start.dateTime
-        ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-        : "All day";
-      return `<span class="calendar-item"><span class="calendar-name">📅 ${name}</span><span class="calendar-time">${time}</span></span>`;
+      return `<span class="calendar-item"><span class="calendar-name">📅 ${name}</span><span class="calendar-time">${escapeHtml(ev.timeText)}</span></span>`;
     }).join("");
     calendarEl.hidden = false;
   } catch (err) {
@@ -315,10 +330,8 @@ function renderPersonView(id) {
     }
     contentEl.innerHTML = lastCalendarEvents.map((ev) => {
       const name = escapeHtml(ev.summary || "(untitled)");
-      const time = ev.start.dateTime
-        ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-        : "All day";
-      return `<div class="person-event"><span>📅 ${name}</span><span class="time">${time}</span></div>`;
+      const where = ev.location ? ` <small class="muted">· ${escapeHtml(ev.location)}</small>` : "";
+      return `<div class="person-event"><span>📅 ${name}${where}</span><span class="time">${escapeHtml(ev.timeText)}</span></div>`;
     }).join("");
   }
 }
