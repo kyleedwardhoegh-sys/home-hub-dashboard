@@ -359,3 +359,8 @@ changes no longer need a kiosk restart.
 - **Problem:** 7G1 (Nellie's team) showed on the Training Hub but not the home screen. `/api/calendar` only reads `kyleedwardhoegh@gmail.com` with an API key, and the team calendars are imported (OMGBA) calendars the key can't see.
 - **Fix:** `loadTodayEvents()` uses `HubData.getEvents(today)` first (from the Training Hub's hubdata.js). That's today's events from Kyle's, Logan's, the family, Crossbar and both team calendars, published by the Sheet's Apps Script every 5 minutes. `/api/calendar` is the fallback. Events are normalized to `{summary, timeText, location}`, and they refresh every 5 minutes.
 - **Calendar pill:** `HomeHubNav.ahk` adds a **Calendar** pill to the bottom-center group (▶ Nellie · ▶ Nash · Calendar). It opens `https://calendar.google.com/calendar/u/0/r/week` in the kiosk via `cdp-nav.ps1 -Action open`. The launcher's Calendar tile opens the same week view.
+
+## Kyle / Logan / Both tags (2026-10-19)
+- Calendar events show who they're for as colored tags in the avatar colors: **Kyle** (amber), **Logan** (purple), **Both** (split amber/purple), and **Nellie** / **Nash**. They appear on the home screen and on the person boards (`whoTags`).
+- Kyle's and Logan's boards list "<Name>'s day" (their events + Both) and then "Also today".
+- Data: the Training Hub's `events:home` doc (see HomeHub-Web HANDOFF). Until it's published, events show without tags, as before.

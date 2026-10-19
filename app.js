@@ -150,7 +150,7 @@ async function loadTodayEvents() {
   if (window.HubData && HubData.getEvents) {
     try {
       const ev = await HubData.getEvents(localDate());
-      if (ev) return ev.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "" }));
+      if (ev) return ev.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "", who: e.who || null }));
     } catch (e) { /* fall back below */ }
   }
   const res = await fetch("/api/calendar", { cache: "no-store" });
@@ -160,7 +160,21 @@ async function loadTodayEvents() {
     summary: ev.summary,
     timeText: ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "All day",
     location: "",
+    who: null,
   }));
+}
+
+// Who an event is for, as small colored tags: Kyle (amber), Logan (purple), Both (a
+// split amber/purple chip when it's for Kyle AND Logan), and the kids in their colors.
+function whoTags(ev) {
+  if (!ev.who || !ev.who.length) return "";
+  const w = new Set(ev.who), tags = [];
+  if (w.has("Kyle") && w.has("Logan")) tags.push(`<span class="who who-both">Both</span>`);
+  else if (w.has("Kyle")) tags.push(`<span class="who who-kyle">Kyle</span>`);
+  else if (w.has("Logan")) tags.push(`<span class="who who-logan">Logan</span>`);
+  if (w.has("Nellie")) tags.push(`<span class="who who-nellie">Nellie</span>`);
+  if (w.has("Nash")) tags.push(`<span class="who who-nash">Nash</span>`);
+  return tags.join("");
 }
 
 async function updateCalendar() {
@@ -176,7 +190,8 @@ async function updateCalendar() {
 
     calendarEl.innerHTML = events.map((ev) => {
       const name = escapeHtml(ev.summary || "(untitled)");
-      return `<span class="calendar-item"><span class="calendar-name">📅 ${name}</span><span class="calendar-time">${escapeHtml(ev.timeText)}</span></span>`;
+      const tags = whoTags(ev);
+      return `<span class="calendar-item">${tags || "📅"}<span class="calendar-name">${name}</span><span class="calendar-time">${escapeHtml(ev.timeText)}</span></span>`;
     }).join("");
     calendarEl.hidden = false;
   } catch (err) {
@@ -328,11 +343,19 @@ function renderPersonView(id) {
       contentEl.innerHTML = `<div class="person-empty">Nothing on the calendar today.</div>`;
       return;
     }
-    contentEl.innerHTML = lastCalendarEvents.map((ev) => {
+    // A parent's board: their events (incl. "Both") first, then everything else today.
+    const row = (ev) => {
       const name = escapeHtml(ev.summary || "(untitled)");
-      const where = ev.location ? ` <small class="muted">· ${escapeHtml(ev.location)}</small>` : "";
-      return `<div class="person-event"><span>📅 ${name}${where}</span><span class="time">${escapeHtml(ev.timeText)}</span></div>`;
-    }).join("");
+      const where = ev.location ? `<small class="where">${escapeHtml(ev.location)}</small>` : "";
+      return `<div class="person-event"><span class="ev-tags">${whoTags(ev) || "📅"}</span><span class="ev-text">${name}${where}</span><span class="time">${escapeHtml(ev.timeText)}</span></div>`;
+    };
+    const tagged = lastCalendarEvents.some((ev) => ev.who);
+    const mine = tagged ? lastCalendarEvents.filter((ev) => ev.who && ev.who.includes(person.name)) : lastCalendarEvents;
+    const rest = tagged ? lastCalendarEvents.filter((ev) => !mine.includes(ev)) : [];
+    contentEl.innerHTML =
+      `<h3 class="ev-head">${tagged ? `${escapeHtml(person.name)}'s day` : "Today"}</h3>` +
+      (mine.length ? mine.map(row).join("") : `<div class="person-empty">Nothing just for you today.</div>`) +
+      (rest.length ? `<h3 class="ev-head">Also today</h3>${rest.map(row).join("")}` : "");
   }
 }
 
