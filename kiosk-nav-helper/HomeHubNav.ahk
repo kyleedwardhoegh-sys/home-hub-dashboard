@@ -55,11 +55,22 @@ MARGIN := 8
 repoRoot := A_ScriptDir "\.."
 psPrefix := 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "'
 cdpScript := A_ScriptDir "\cdp-nav.ps1"
+; NELLIE / NASH (added 2026-10-19, Kyle: "Nellie and Nash have easy access to their
+; daily workout options in the click of 1 button no matter where the home hub is").
+; Bottom-center, between Home and Exit, so they sit over every page the kiosk shows
+; (dashboard, Training Hub, football planner, team site, calendar...). One tap opens
+; that kid's Training Hub; with no &track= it opens the track for the time of day
+; (Morning before 11, After School before 6 PM, then Night). Same neutral color as
+; the other pills on purpose: pink/blue on screen means "you're on that kid's page".
+TRAINING := "https://home-hub-web-hoegh-home.vercel.app/"
+KID_GAP := 12
 
 BUTTONS := [
     { id: "back", label: Chr(0x2190) " Back", x: A_ScreenWidth - BTN_W - MARGIN, y: MARGIN,                          cmd: psPrefix cdpScript '" -Action back' },
     { id: "home", label: Chr(0x2302) " Home", x: MARGIN,                         y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action home' },
-    { id: "exit", label: Chr(0x2715) " Exit", x: A_ScreenWidth - BTN_W - MARGIN, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix repoRoot '\exit-kiosk.ps1"' }
+    { id: "exit", label: Chr(0x2715) " Exit", x: A_ScreenWidth - BTN_W - MARGIN, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix repoRoot '\exit-kiosk.ps1"' },
+    { id: "nellie", label: Chr(0x25B6) " Nellie", x: A_ScreenWidth // 2 - BTN_W - KID_GAP // 2, y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' TRAINING '?p=Nellie&kiosk=1"' },
+    { id: "nash",   label: Chr(0x25B6) " Nash",   x: A_ScreenWidth // 2 + KID_GAP // 2,         y: A_ScreenHeight - BTN_H - MARGIN, cmd: psPrefix cdpScript '" -Action open -Url "' TRAINING '?p=Nash&kiosk=1"' }
 ]
 
 for btn in BUTTONS {

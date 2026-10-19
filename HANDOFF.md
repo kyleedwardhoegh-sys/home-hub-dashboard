@@ -347,3 +347,10 @@ changes no longer need a kiosk restart.
   Needs a real test on the actual touchscreen.
 
 **Taskbar shortcut icon (2026-10-14):** the pinned "Launch Home Hub Kiosk" shortcut showed a blank page because its icon pointed at `%ProgramFiles%\Microsoft\Edge\...` (Edge lives in `Program Files (x86)` on this PC). It now uses `kiosk-icon.ico` in this repo: a white house with a gold door on the dashboard's navy rounded square. If the repo moves, re-point the shortcut's icon (`%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Launch Home Hub Kiosk.lnk`).
+
+## Nellie / Nash pills on every kiosk page (2026-10-19)
+- Kyle: "Nellie and Nash have easy access to their daily workout options in the click of 1 button no matter where the home hub is."
+- `HomeHubNav.ahk` now draws two more pills, **▶ Nellie** and **▶ Nash**, bottom-center between Home and Exit. They use the same neutral style and only show while the kiosk is in front.
+- Tap → `cdp-nav.ps1 -Action open -Url https://home-hub-web-hoegh-home.vercel.app/?p=<Kid>&kiosk=1`. With no `&track=`, the Training Hub opens the track for the time of day: Morning before 11, After School before 6 PM, then Night.
+- Because these sit over every page (dashboard, Training Hub, practice planner, team site, calendar), the Training Hub's own web top bar stays hidden on the kiosk.
+- After editing the .ahk: `schtasks /end /tn HomeHubNavHelper` then `schtasks /run /tn HomeHubNavHelper`.
