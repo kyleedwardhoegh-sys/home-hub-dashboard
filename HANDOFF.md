@@ -375,3 +375,13 @@ changes no longer need a kiosk restart.
   - Changes save optimistically. A refresh keeps this screen's changes from the last 20 s (`HH.recent`) so a slow save never makes an item blink away.
   - The open board refreshes every 60 s. Typing resets the 25 s idle timer.
 - `household.js` loads before `app.js`. `renderPersonView` hands parent boards to `renderParentBoard`, and `updateCalendar` loads household data (capped at 4 s) so the 🚗 tags and the next countdown show on the home screen.
+
+## Ask Claude on Kyle's / Logan's boards (2026-10-19)
+- An **✨ Ask Claude** button sits at the top of each parent board. Tapping it sets `document.title` to `Home Hub | ask-claude:<Name>` for 4 s (the page can't launch programs itself).
+- `HomeHubNav.ahk` (`WatchAskClaude`, every 500 ms while the kiosk is in front) sees that in the kiosk window's title and runs `LaunchClaude(name)`:
+  1. `code.cmd "G:\My Drive\Claude Tools & Instructions\People\<Name>"`
+  2. wait for the "<Name> - Visual Studio Code" window, activate and maximize it
+  3. after 2.5 s, open `vscode://anthropic.claude-code/open` (the Claude Code extension's URI handler), which opens the Claude panel in that window
+- Claude then loads that person's `CLAUDE.md` (preferences and projects) and keeps per-folder memory. It only works for names in `ASK_CLAUDE_PEOPLE` (Kyle, Logan), at most once per 15 s.
+- One-time prompts on first use: VS Code's "trust this folder?" and "allow Claude Code to open this URI?". Answer yes / don't ask again.
+- Close the VS Code window to get back to the kiosk. Phone / remote access: later.

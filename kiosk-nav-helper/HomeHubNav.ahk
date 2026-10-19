@@ -142,6 +142,49 @@ Tick() {
     }
 }
 SetTimer(Tick, 500)
+SetTimer(WatchAskClaude, 500)
+
+; ---- "Ask Claude" from Kyle's / Logan's board (added 2026-10-19) ----
+; The dashboard can't start programs, so its Ask Claude button briefly sets the page
+; title to "... ask-claude:<Name>". The kiosk window's title is the page title, so we see
+; it here, then open VS Code on that person's profile folder (People\<Name>, whose
+; CLAUDE.md holds their preferences and projects) and open the Claude Code panel there
+; via the extension's vscode://anthropic.claude-code/open link.
+PEOPLE_DIR := "G:\My Drive\Claude Tools & Instructions\People\"
+ASK_CLAUDE_PEOPLE := Map("Kyle", 1, "Logan", 1)
+lastAskClaude := 0
+
+WatchAskClaude() {
+    global lastAskClaude, ASK_CLAUDE_PEOPLE
+    if !KioskInFront()
+        return
+    try title := WinGetTitle("A")
+    catch
+        return
+    if !RegExMatch(title, "ask-claude:(\w+)", &m)
+        return
+    if (A_TickCount - lastAskClaude < 15000) || !ASK_CLAUDE_PEOPLE.Has(m[1])
+        return
+    lastAskClaude := A_TickCount
+    LaunchClaude(m[1])
+}
+
+LaunchClaude(person) {
+    global PEOPLE_DIR
+    folder := PEOPLE_DIR person
+    if !DirExist(folder)
+        return
+    codeCmd := EnvGet("LOCALAPPDATA") "\Programs\Microsoft VS Code\bin\code.cmd"
+    Run('"' codeCmd '" "' folder '"', , "Hide")
+    SetTitleMatchMode(2)
+    win := person " - Visual Studio Code ahk_exe Code.exe"
+    if !WinWait(win, , 45)
+        return
+    WinActivate(win)
+    WinMaximize(win)
+    Sleep(2500)  ; let the Claude Code extension finish starting in the new window
+    Run("vscode://anthropic.claude-code/open")
+}
 SetTimer(() => kioskPids.Clear(), 300000)  ; forget cached pids now and then (pids get reused)
 
 activeButton := ""

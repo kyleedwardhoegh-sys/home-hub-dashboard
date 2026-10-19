@@ -186,6 +186,14 @@ html, body {
 .ev-text { display: grid; min-width: 0; }
 .ev-text .where { font-size: .8em; opacity: .7; font-weight: 500; }
 /* ---------- household tools (Kyle's + Logan's boards) ---------- */
+.ask-claude { display: flex; align-items: center; gap: 16px; min-height: 96px; padding: 16px 22px; border: 0; border-radius: var(--radius); background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; text-align: left; font: inherit; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+.ask-claude:active { transform: scale(0.98); }
+.ask-claude.opening { opacity: .85; }
+.ac-spark { font-size: 38px; }
+.ac-text { display: grid; gap: 2px; flex: 1; }
+.ac-text b { font-size: 26px; }
+.ac-text small { font-size: 16px; opacity: .92; }
+.ac-go { font-size: 44px; line-height: 1; }
 .hh-board { display: flex; flex-direction: column; gap: 6px; }
 .hh-board > section { display: flex; flex-direction: column; gap: 10px; }
 .hh-board > section:empty { display: none; }

@@ -75,6 +75,11 @@ let hhPerson = null;
 function renderParentBoard(id, person, el) {
   hhPerson = person;
   el.innerHTML = `<div class="hh-board">
+    <button class="ask-claude" type="button" data-ask-claude="${escapeHtml(person.name)}">
+      <span class="ac-spark" aria-hidden="true">✨</span>
+      <span class="ac-text"><b>Ask Claude</b><small>Your assistant. It knows your preferences and projects.</small></span>
+      <span class="ac-go" aria-hidden="true">›</span>
+    </button>
     <section id="hh-cd"></section>
     <section id="hh-day"></section>
     <section id="hh-drive"></section>
@@ -223,6 +228,22 @@ document.addEventListener("click", async (e) => {
     hhSave("countdowns", [{ ...c, removed: true }]);
   }
 });
+// Ask Claude: the kiosk helper (HomeHubNav.ahk) watches the window title for
+// "ask-claude:<Name>" and opens Claude Code in that person's profile folder.
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-ask-claude]");
+  if (!b) return;
+  const name = b.dataset.askClaude, before = document.title;
+  document.title = `Home Hub | ask-claude:${name}`;
+  setTimeout(() => { document.title = before; }, 4000);
+  b.classList.add("opening");
+  b.querySelector("small").textContent = "Opening Claude on the kitchen computer… Close its window when you're done.";
+  setTimeout(() => {
+    b.classList.remove("opening");
+    b.querySelector("small").textContent = "Your assistant. It knows your preferences and projects.";
+  }, 12000);
+});
+
 document.addEventListener("submit", (e) => {
   if (!e.target.matches("[data-add-form]")) return;
   e.preventDefault();
