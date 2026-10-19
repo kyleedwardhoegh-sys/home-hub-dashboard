@@ -26,6 +26,7 @@
       <span class="weather-temp" id="weather-temp">--°</span>
       <span class="weather-desc" id="weather-desc">Loading weather…</span>
     </div>
+    <div class="next-countdown" id="next-countdown" hidden></div>
     <div class="calendar-events" id="calendar-events" hidden></div>
   </div>
 
@@ -101,6 +102,7 @@
 <!-- Training Hub data layer (fast database, falls back to the Sheet). Optional: if it
      can't load, the kid boards read the Sheet's Apps Script directly like before. -->
 <script src="https://home-hub-web-hoegh-home.vercel.app/hubdata.js"></script>
+<script src="household.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

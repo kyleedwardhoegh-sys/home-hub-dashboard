@@ -182,6 +182,8 @@ async function updateCalendar() {
   try {
     const events = await loadTodayEvents();
     lastCalendarEvents = events;
+    // Who's driving + countdowns (household.js); never let it block the calendar.
+    if (typeof loadHousehold === "function") await Promise.race([loadHousehold().catch(() => {}), new Promise((r) => setTimeout(r, 4000))]);
 
     if (events.length === 0) {
       calendarEl.hidden = true;
@@ -191,7 +193,8 @@ async function updateCalendar() {
     calendarEl.innerHTML = events.map((ev) => {
       const name = escapeHtml(ev.summary || "(untitled)");
       const tags = whoTags(ev);
-      return `<span class="calendar-item">${tags || "📅"}<span class="calendar-name">${name}</span><span class="calendar-time">${escapeHtml(ev.timeText)}</span></span>`;
+      const drive = typeof driveTag === "function" ? driveTag(ev, localDate()) : "";
+      return `<span class="calendar-item">${tags || "📅"}<span class="calendar-name">${name}</span>${drive}<span class="calendar-time">${escapeHtml(ev.timeText)}</span></span>`;
     }).join("");
     calendarEl.hidden = false;
   } catch (err) {
@@ -343,19 +346,9 @@ function renderPersonView(id) {
       contentEl.innerHTML = `<div class="person-empty">Nothing on the calendar today.</div>`;
       return;
     }
-    // A parent's board: their events (incl. "Both") first, then everything else today.
-    const row = (ev) => {
-      const name = escapeHtml(ev.summary || "(untitled)");
-      const where = ev.location ? `<small class="where">${escapeHtml(ev.location)}</small>` : "";
-      return `<div class="person-event"><span class="ev-tags">${whoTags(ev) || "📅"}</span><span class="ev-text">${name}${where}</span><span class="time">${escapeHtml(ev.timeText)}</span></div>`;
-    };
-    const tagged = lastCalendarEvents.some((ev) => ev.who);
-    const mine = tagged ? lastCalendarEvents.filter((ev) => ev.who && ev.who.includes(person.name)) : lastCalendarEvents;
-    const rest = tagged ? lastCalendarEvents.filter((ev) => !mine.includes(ev)) : [];
-    contentEl.innerHTML =
-      `<h3 class="ev-head">${tagged ? `${escapeHtml(person.name)}'s day` : "Today"}</h3>` +
-      (mine.length ? mine.map(row).join("") : `<div class="person-empty">Nothing just for you today.</div>`) +
-      (rest.length ? `<h3 class="ev-head">Also today</h3>${rest.map(row).join("")}` : "");
+    // Kyle's and Logan's boards: countdowns, their day, who's driving, shared lists
+    // (household.js).
+    renderParentBoard(id, person, contentEl);
   }
 }
 

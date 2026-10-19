@@ -364,3 +364,14 @@ changes no longer need a kiosk restart.
 - Calendar events show who they're for as colored tags in the avatar colors: **Kyle** (amber), **Logan** (purple), **Both** (split amber/purple), and **Nellie** / **Nash**. They appear on the home screen and on the person boards (`whoTags`).
 - Kyle's and Logan's boards list "<Name>'s day" (their events + Both) and then "Also today".
 - Data: the Training Hub's `events:home` doc (see HomeHub-Web HANDOFF). Until it's published, events show without tags, as before.
+
+## Kyle's and Logan's boards: household tools (2026-10-19, `household.js`)
+- Kyle asked for Logan's page to help her day to day. Both parent boards are now one tall column:
+  1. **Countdowns:** cards with days left. **＋ Countdown** takes a title, date and emoji; ✕ removes one. The soonest countdown also shows on the home screen under the weather.
+  2. **<Name>'s day / Also today:** calendar with Kyle / Logan / Both tags.
+  3. **Who's driving?** Today's and tomorrow's kid events, each with big Kyle / Logan buttons (tap again to clear). The driver shows as a 🚗 tag on the home screen and the boards.
+  4. **Lists:** 🛒 Groceries / ✅ To-do. Add, tap to check, "Clear N checked".
+- Data lives in the Training Hub's Supabase (`drives`, `household_items`, `countdowns`; see HomeHub-Web `supabase/household.sql`) via `HubData.rows` / `HubData.save`, so phones and the kiosk share it.
+  - Changes save optimistically. A refresh keeps this screen's changes from the last 20 s (`HH.recent`) so a slow save never makes an item blink away.
+  - The open board refreshes every 60 s. Typing resets the 25 s idle timer.
+- `household.js` loads before `app.js`. `renderPersonView` hands parent boards to `renderParentBoard`, and `updateCalendar` loads household data (capped at 4 s) so the 🚗 tags and the next countdown show on the home screen.
