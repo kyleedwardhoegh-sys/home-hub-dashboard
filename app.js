@@ -462,3 +462,15 @@ async function checkForUpdate() {
   } catch (e) { /* offline: try again next time */ }
 }
 if (location.protocol.startsWith("http")) { checkForUpdate(); setInterval(checkForUpdate, 5 * 60000); }
+
+// ---- Open a board by link: ?person=kyle (added 2026-10-30) ----
+// The camera greeter (C:\Users\Owner\source\repos\hub-greeter) recognizes who walked
+// up, shows their avatar, then sends the kiosk here. Waits briefly for today's
+// calendar so the board isn't drawn empty.
+(() => {
+  const p = new URLSearchParams(location.search).get("person");
+  if (!p || !PEOPLE[p]) return;
+  const t0 = Date.now();
+  const go = () => (lastCalendarEvents.length || Date.now() - t0 > 5000 ? showPerson(p) : setTimeout(go, 250));
+  setTimeout(go, 0);
+})();
