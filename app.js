@@ -150,7 +150,7 @@ async function loadTodayEvents() {
   if (window.HubData && HubData.getEvents) {
     try {
       const ev = await HubData.getEvents(localDate());
-      if (ev) return ev.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "", who: e.who || null }));
+      if (ev) return ev.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "", who: e.who || null, link: e.link || "" }));
     } catch (e) { /* fall back below */ }
   }
   const res = await fetch("/api/calendar", { cache: "no-store" });
@@ -161,7 +161,16 @@ async function loadTodayEvents() {
     timeText: ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "All day",
     location: "",
     who: null,
+    link: ev.link || "",
   }));
+}
+
+// Tap an event on any screen → its page in Google Calendar, or that day's view when the
+// event has no link (the Sheet script needs the Calendar API service for those).
+function calHref(ev, day) {
+  if (/^https:\/\/(www|calendar)\.google\.com\//.test(ev.link || "")) return ev.link;
+  const [y, m, d] = String(day).split("-").map(Number);
+  return `https://calendar.google.com/calendar/r/day/${y}/${m}/${d}`;
 }
 
 // Who an event is for, as small colored tags: Kyle (amber), Logan (purple), Both (a
@@ -194,7 +203,7 @@ async function updateCalendar() {
       const name = escapeHtml(ev.summary || "(untitled)");
       const tags = whoTags(ev);
       const drive = typeof driveTag === "function" ? driveTag(ev, localDate()) : "";
-      return `<span class="calendar-item">${tags || "📅"}<span class="calendar-name">${name}</span>${drive}<span class="calendar-time">${escapeHtml(ev.timeText)}</span></span>`;
+      return `<a class="calendar-item" href="${escapeHtml(calHref(ev, localDate()))}">${tags || "📅"}<span class="calendar-name">${name}</span>${drive}<span class="calendar-time">${escapeHtml(ev.timeText)}</span></a>`;
     }).join("");
     calendarEl.hidden = false;
   } catch (err) {
@@ -261,7 +270,8 @@ function resetIdleTimer() {
   idleTimer = setTimeout(showAmbient, IDLE_TIMEOUT_MS);
 }
 
-ambientView.addEventListener("pointerdown", showLauncher);
+// A tap on a calendar event opens that event instead of the launcher.
+ambientView.addEventListener("pointerdown", (e) => { if (!e.target.closest(".calendar-item")) showLauncher(); });
 launcherView.addEventListener("pointerdown", resetIdleTimer);
 personView.addEventListener("pointerdown", resetIdleTimer);
 settingsView.addEventListener("pointerdown", resetIdleTimer);

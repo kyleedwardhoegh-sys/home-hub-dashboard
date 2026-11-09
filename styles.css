@@ -167,6 +167,9 @@ html, body {
   border-radius: 999px;
   backdrop-filter: blur(6px);
 }
+/* Events are links to Google Calendar: keep them looking like the chips and cards they were. */
+a.calendar-item, a.person-event, a.drive-ev { color: inherit; text-decoration: none; }
+a.calendar-item:active, a.person-event:active, a.drive-ev:active { transform: scale(.98); }
 .calendar-name {
   overflow: hidden;
   white-space: nowrap;

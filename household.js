@@ -48,7 +48,7 @@ async function loadHousehold() {
   }
   if (items) HH.items = merge(items, "household_items").sort((a, b) => String(a.created_at || "~").localeCompare(String(b.created_at || "~")));
   if (cds) HH.countdowns = merge(cds, "countdowns").filter((c) => daysUntil(c.day) >= 0).sort((a, b) => (a.day < b.day ? -1 : 1));
-  if (tomEv) HH.tomorrow = tomEv.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "", who: e.who || null }));
+  if (tomEv) HH.tomorrow = tomEv.map((e) => ({ summary: e.title, timeText: e.time || "All day", location: e.location || "", who: e.who || null, link: e.link || "" }));
   renderNextCountdown();
 }
 
@@ -101,7 +101,7 @@ function renderAll(soft) {
 function evRow(ev, day) {
   const name = escapeHtml(ev.summary || "(untitled)");
   const where = ev.location ? `<small class="where">${escapeHtml(ev.location)}</small>` : "";
-  return `<div class="person-event"><span class="ev-tags">${whoTags(ev) || "📅"}</span><span class="ev-text">${name}${where}</span>${driveTag(ev, day)}<span class="time">${escapeHtml(ev.timeText)}</span></div>`;
+  return `<a class="person-event" href="${escapeHtml(calHref(ev, day))}"><span class="ev-tags">${whoTags(ev) || "📅"}</span><span class="ev-text">${name}${where}</span>${driveTag(ev, day)}<span class="time">${escapeHtml(ev.timeText)}</span></a>`;
 }
 function renderDay() {
   const person = hhPerson, today = localDate();
@@ -126,7 +126,7 @@ function renderDrives() {
     const id = driveId(day, ev), cur = HH.drives[id] || "";
     const btn = (p) => `<button class="drive-btn ${cur === p ? `on drive-${p.toLowerCase()}` : ""}" type="button" data-drive="${escapeHtml(id)}" data-day="${day}" data-title="${escapeHtml(ev.summary)}" data-who="${p}">${cur === p ? "🚗 " : ""}${p}</button>`;
     return `<div class="drive-row">
-      <div class="drive-ev"><span class="ev-tags">${whoTags(ev)}</span><span class="ev-text">${escapeHtml(ev.summary)}<small class="where">${label} · ${escapeHtml(ev.timeText)}${ev.location ? ` · ${escapeHtml(ev.location)}` : ""}</small></span></div>
+      <a class="drive-ev" href="${escapeHtml(calHref(ev, day))}"><span class="ev-tags">${whoTags(ev)}</span><span class="ev-text">${escapeHtml(ev.summary)}<small class="where">${label} · ${escapeHtml(ev.timeText)}${ev.location ? ` · ${escapeHtml(ev.location)}` : ""}</small></span></a>
       <div class="drive-btns">${btn("Kyle")}${btn("Logan")}</div>
     </div>`;
   }).join("");

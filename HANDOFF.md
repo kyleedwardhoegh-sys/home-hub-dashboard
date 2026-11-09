@@ -385,3 +385,6 @@ changes no longer need a kiosk restart.
 - Claude then loads that person's `CLAUDE.md` (preferences and projects) and keeps per-folder memory. It only works for names in `ASK_CLAUDE_PEOPLE` (Kyle, Logan), at most once per 15 s.
 - One-time prompts on first use: VS Code's "trust this folder?" and "allow Claude Code to open this URI?". Answer yes / don't ask again.
 - Close the VS Code window to get back to the kiosk. Phone / remote access: later.
+
+## Tap an event → Google Calendar (2026-11-09)
+Home screen chips (`a.calendar-item`), parent-board events (`a.person-event`) and Who's driving rows (`a.drive-ev`) link to the event in Google Calendar via `calHref(ev, day)` in app.js: the event's `link` from the Training Hub's events docs (see HomeHub-Web HANDOFF), else that day's view. A tap on an event on the ambient screen opens the event instead of the launcher. `/api/calendar` (fallback) now also returns `link`.

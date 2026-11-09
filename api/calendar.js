@@ -61,6 +61,7 @@ export default async function handler(req, res) {
     const events = (data.items || []).map((ev) => ({
       summary: ev.summary || null,
       start: ev.start,
+      link: ev.htmlLink || null,
     }));
     res.status(200).json({ events });
   } catch (err) {
