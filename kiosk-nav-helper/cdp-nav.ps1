@@ -40,7 +40,7 @@ $expression = switch ($Action) {
 
 function Get-KioskPage {
   try {
-    $targets = Invoke-RestMethod -Uri "http://127.0.0.1:9222/json" -TimeoutSec 3
+    $targets = Invoke-RestMethod -Uri "http://127.0.0.1:9222/json" -TimeoutSec 10   # was 3; endpoint took >3 s on 2026-11-23 and pills silently failed
     # Windows PowerShell 5.1 passes a JSON array down the pipeline as ONE object;
     # ForEach-Object { $_ } unrolls it so Where-Object sees each target.
     return $targets | ForEach-Object { $_ } | Where-Object { $_.type -eq "page" } | Select-Object -First 1
