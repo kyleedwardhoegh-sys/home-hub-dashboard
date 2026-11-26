@@ -6,7 +6,7 @@ const IDLE_TIMEOUT_MS = 25 * 1000; // return to ambient after 25s of no touch
 
 const CALENDAR_REFRESH_MS = 5 * 60 * 1000; // 5 min (the database copy refreshes every 5)
 
-const WORKOUT_API_BASE = "https://script.google.com/macros/s/AKfycbxS-f1ZvxZazJ-_2P2Lakrgb-vSaM3EmyRQbRxuRFf9M_P94LUB5ogudg3UwIS69kYR/exec";
+const WORKOUT_API_BASE = "https://script.google.com/macros/s/AKfycbyyOY00079KTcqhRtuoE_W_OhRTZGlsHgfSTgryrTl3ZzsVFHwiA54bJ55hu7qChYyxGQ/exec";
 const WORKOUT_POLL_MS = 60 * 1000; // 1 min - frequent enough that the celebration feels close to real-time
 
 const PEOPLE = {
