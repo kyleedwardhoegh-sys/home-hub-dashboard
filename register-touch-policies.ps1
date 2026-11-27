@@ -21,4 +21,9 @@ $proto = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\AutoLaunchProtocolsFromOrigins"
 New-Item -Path $proto -Force | Out-Null
 Set-ItemProperty -Path $proto -Name "1" -Value '{"protocol":"homehubadmin","allowed_origins":["*"]}'
 
+# 3. (2026-11-27) Lets the hosted hub reach the kitchen-PC helper on localhost (close the kiosk) without
+#    Edge's "wants to access other apps and services on this device" prompt (Local Network Access).
+$lna = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\LocalNetworkAccessAllowedForUrls"
+New-Item -Path $lna -Force | Out-Null
+Set-ItemProperty -Path $lna -Name "1" -Value "https://home-hub-web-hoegh-home.vercel.app"
 Write-Host "Done: Windows edge swipes off; homehubadmin:// allowed in Edge. Restart the PC once."
